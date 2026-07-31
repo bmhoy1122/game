@@ -1,0 +1,16 @@
+# 빌드 도구 없이 정적 파일만 그대로 올린다.
+# 저장소 루트가 곧 사이트 루트가 된다.
+[build]
+  publish = "."
+  command = ""
+
+# 캐시: HTML 은 항상 새로 받고, 그림은 오래 캐시한다.
+[[headers]]
+  for = "/*.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/*/art/*"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"
