@@ -5,43 +5,36 @@
 ```
 /                     허브(게임 목록)  → https://<사이트>.netlify.app/
 ├─ index.html
+├─ CLAUDE.md          ← 작업 전에 읽는 문서
 ├─ netlify.toml
+├─ docs/art-guide.md
+├─ tools/smoke.js
 └─ evening-night/     게임 하나       → https://<사이트>.netlify.app/evening-night/
    ├─ index.html
-   └─ art/            스프라이트 (hero / mob / prop)
+   └─ art/            hero / mob / prop 스프라이트
 ```
 
-## 게임 추가하는 법
+## 게임 추가
 
-1. 새 폴더를 만들고 그 안에 `index.html` 을 넣는다
-2. 루트 `index.html` 에 카드 하나를 복사해 붙이고 `href` 를 새 폴더로 바꾼다
-3. `git push` → 넷리파이가 알아서 배포한다
+1. 새 폴더 + 그 안에 `index.html`
+2. 루트 `index.html` 에 카드 한 장 복사해 붙이고 `href` 수정
+3. `git push` → 넷리파이가 자동 배포
 
 ## 넷리파이 설정
-
-깃허브 저장소를 연결한 뒤 아래 두 개만 맞추면 된다.
 
 | 항목 | 값 |
 |---|---|
 | Build command | (비움) |
 | Publish directory | `.` |
 
-`netlify.toml` 이 이미 같은 내용을 담고 있어서 보통은 자동으로 잡힌다.
+`netlify.toml` 에 같은 내용이 있어서 보통 자동으로 잡힌다.
+`main` 이 배포 대상. 실험은 다른 브랜치에서 하고 Branch deploys 로 확인 후 머지.
 
-## 로컬에서 볼 때
-
-그림을 별도 파일로 두었기 때문에 `index.html` 을 더블클릭해서 열면
-브라우저가 `file://` 에서 이미지를 막는다. 간단한 서버를 띄우고 보자.
+## 로컬 확인
 
 ```bash
-python3 -m http.server 8000
-# http://localhost:8000/evening-night/
+node tools/smoke.js            # 로직 회귀 테스트
+python3 -m http.server 8000    # http://localhost:8000/evening-night/
 ```
 
-그림이 안 불러와져도 게임은 돌아간다. 도형으로 그린 임시 캐릭터로 대체된다.
-
-## 브랜치
-
-- `main` — 배포되는 버전
-- 실험은 다른 브랜치에서. 넷리파이 Branch deploys 를 켜 두면
-  `<브랜치>--<사이트>.netlify.app` 주소로 미리 볼 수 있다. 확인 후 `main` 에 머지.
+`index.html` 을 더블클릭해 열면 `file://` 이라 그림이 안 뜬다(게임은 돌아간다).
