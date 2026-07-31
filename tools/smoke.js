@@ -64,13 +64,14 @@ const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
 const EXPOSE = `
 global.__game = {
   step, render, hit, keys,
-  stickHold, stickMove, stickRelease, get stick(){return stick}, mk,
+  stickHold, stickMove, stickRelease, get stick(){return stick}, mk, ART, MOBART,
   get mode(){return mode}, get player(){return player}, get ents(){return ents},
   get items(){return items}, get wprops(){return wprops}, get sceneIdx(){return sceneIdx},
   get exitOpen(){return exitOpen}, get helpOpen(){return helpOpen},
 };`;
 eval(script + EXPOSE);
 const G = global.__game;
+const { ART, MOBART } = G;
 
 let failures = 0;
 const check = (name, ok, extra = '') => {
@@ -105,7 +106,25 @@ const approachFoe = () => {
   return null;
 };
 
+const png = (p) => { const b = fs.readFileSync(p); return { w: b.readUInt32BE(16), h: b.readUInt32BE(20) }; };
+
 try {
+  // 시트에 없는 행을 그리면 캐릭터가 투명해져 통째로 사라진다. alt 없이 넘어가는 행이 없어야 한다.
+  const artDir = path.join(__dirname, '..', 'evening-night', 'art');
+  const heroRows = png(path.join(artDir, 'hero.png')).h / ART.hero.frameH;
+  const mobRows = png(path.join(artDir, 'mob.png')).h / MOBART.cell;
+  const missing = [];
+  for (const [k, a] of Object.entries(ART.hero.anims))
+    if (a.row >= heroRows && !a.alt) missing.push('hero:' + k);
+  for (const [k, s2] of Object.entries(MOBART)) {
+    if (!s2 || typeof s2 !== 'object' || s2.idle === undefined) continue;
+    for (const r of ['idle', 'walk', 'face'])
+      if (s2[r] >= mobRows && !s2.alt) missing.push(`mob:${k}.${r}`);
+  }
+  check('시트에 없는 행은 전부 대체(alt)가 있다', missing.length === 0, missing.join(' '));
+  check('대시·둥실 심통이 그림이 시트에 있다', heroRows >= 20 && mobRows >= 14,
+    `hero ${heroRows}행 / mob ${mobRows}행`);
+
   // applyHand() 를 righty 선언보다 먼저 부르면 TDZ 가 try/catch 에 삼켜져 조용히 무시된다
   check('저장된 왼손/오른손 설정이 켤 때 반영된다', bodyClasses.has('righty'));
 

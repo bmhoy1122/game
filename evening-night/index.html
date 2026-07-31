@@ -142,7 +142,8 @@ const PROPS={
 const MOBART={img:null,cell:96,
   dust:{idle:0,walk:1,face:2}, cat:{idle:3,walk:4,face:5},
   bear:{idle:6,walk:7,face:8},  boss:{idle:9,walk:10,face:11},
-  puff:{idle:12,walk:13,face:14,alt:'dust'}};   // 12~14행도 아직 없다 → dust 로 대신 그린다
+  // 표정(14행)은 아직 없어서 먼지뭉치 얼굴을 빌려 쓴다. 얼굴은 몸과 따로 겹쳐 그리니 붙는다.
+  puff:{idle:12,walk:13,face:14,alt:{idle:0,walk:1,face:2}}};
 MOBART.img=new Image(); MOBART.img.src=MOB_SHEET;
 for(const k in ART){const a=ART[k]; if(a.sheet){a.img=new Image();a.img.src=a.sheet;}}
 
@@ -154,8 +155,8 @@ function fitSheets(){
     for(const k in h.anims){ const an=h.anims[k];
       if(an.alt&&an.row>=rows){ const b=h.anims[an.alt]; h.anims[k]={row:b.row,n:b.n,fps:an.fps}; } } }
   if(MOBART.img&&MOBART.img.naturalHeight){ const rows=Math.floor(MOBART.img.naturalHeight/MOBART.cell);
-    for(const k in MOBART){ const s=MOBART[k];
-      if(s&&s.alt&&Math.max(s.idle,s.walk,s.face)>=rows) MOBART[k]=MOBART[s.alt]; } }
+    for(const k in MOBART){ const s=MOBART[k]; if(!s||!s.alt)continue;
+      for(const r of ['idle','walk','face']) if(s[r]>=rows) s[r]=s.alt[r]; } }   // 행 단위로 갈아끼운다
 }
 [ART.hero.img,MOBART.img].forEach(im=>{ if(im&&im.addEventListener)im.addEventListener('load',fitSheets); });
 fitSheets();
