@@ -50,8 +50,8 @@
     body.touch #bZ{left:5vw;  bottom:6vh}
     body.touch #bX{left:27vw; bottom:6vh}
     body.touch #bF{left:5vw;  bottom:calc(6vh + 21vw);width:16vw;height:16vw;font-size:2.9vw}
-    body.touch #stick{right:4vw; bottom:5vh; width:34vw; height:34vw}
-    body.touch #bJ{right:12vw; bottom:calc(5vh + 36vw);font-size:5vw}
+    body.touch #stick{right:5vw; bottom:5vh; width:25vw; height:25vw}
+    body.touch #bJ{right:8vw; bottom:calc(5vh + 27vw);font-size:5vw}
     body.touch.righty #bZ{left:auto;right:5vw}
     body.touch.righty #bX{left:auto;right:27vw}
     body.touch.righty #bF{left:auto;right:5vw}
@@ -64,8 +64,8 @@
     body.touch #bZ{left:2%; bottom:5%}
     body.touch #bX{left:16%;bottom:5%}
     body.touch #bF{left:2%; bottom:33%;height:19%}
-    body.touch #stick{right:2%;bottom:5%;height:40%;width:auto;aspect-ratio:1}
-    body.touch #bJ{right:6%;bottom:50%;height:19%;font-size:clamp(11px,2.2vh,17px)}
+    body.touch #stick{right:3%;bottom:6%;height:30%;width:auto;aspect-ratio:1}
+    body.touch #bJ{right:5%;bottom:40%;height:19%;font-size:clamp(11px,2.2vh,17px)}
     body.touch.righty #bZ{left:auto;right:2%}
     body.touch.righty #bX{left:auto;right:16%}
     body.touch.righty #bF{left:auto;right:2%}
@@ -122,7 +122,8 @@ const ART={
     jump:{row:10,n:4,fps:9},     jumpTickle:{row:11,n:3,fps:16},
     carryIdle:{row:12,n:2,fps:5},carryWalk:{row:13,n:6,fps:12}, carryUse:{row:14,n:4,fps:14},
     oops:{row:15,n:2,fps:8},     sulk:{row:16,n:4,fps:5},
-    cheer:{row:17,n:4,fps:10},   sing:{row:18,n:7,fps:10}}}
+    cheer:{row:17,n:4,fps:10},   sing:{row:18,n:7,fps:10},
+    dash:{row:19,n:4,fps:12,alt:'jump'}}}   // 19행은 아직 시트에 없다 → 아래에서 jump 로 대신한다
 };
 const PROP_SHEET='./art/prop.png';
 const PROPART={img:new Image(),cell:64,
@@ -140,9 +141,24 @@ const PROPS={
 };
 const MOBART={img:null,cell:96,
   dust:{idle:0,walk:1,face:2}, cat:{idle:3,walk:4,face:5},
-  bear:{idle:6,walk:7,face:8},  boss:{idle:9,walk:10,face:11}};
+  bear:{idle:6,walk:7,face:8},  boss:{idle:9,walk:10,face:11},
+  puff:{idle:12,walk:13,face:14,alt:'dust'}};   // 12~14행도 아직 없다 → dust 로 대신 그린다
 MOBART.img=new Image(); MOBART.img.src=MOB_SHEET;
 for(const k in ART){const a=ART[k]; if(a.sheet){a.img=new Image();a.img.src=a.sheet;}}
+
+/* 시트에 아직 없는 행을 그리면 투명하게 나와서 캐릭터가 통째로 사라진다.
+   행 수를 세어보고 모자라면 alt 로 미리 갈아끼운다. 그림이 추가되면 저절로 새 행을 쓴다. */
+function fitSheets(){
+  const h=ART.hero;
+  if(h.img&&h.img.naturalHeight){ const rows=Math.floor(h.img.naturalHeight/h.frameH);
+    for(const k in h.anims){ const an=h.anims[k];
+      if(an.alt&&an.row>=rows){ const b=h.anims[an.alt]; h.anims[k]={row:b.row,n:b.n,fps:an.fps}; } } }
+  if(MOBART.img&&MOBART.img.naturalHeight){ const rows=Math.floor(MOBART.img.naturalHeight/MOBART.cell);
+    for(const k in MOBART){ const s=MOBART[k];
+      if(s&&s.alt&&Math.max(s.idle,s.walk,s.face)>=rows) MOBART[k]=MOBART[s.alt]; } }
+}
+[ART.hero.img,MOBART.img].forEach(im=>{ if(im&&im.addEventListener)im.addEventListener('load',fitSheets); });
+fitSheets();
 
 /* --------------------------------------------------------------- 기술 정의 */
 /* su 준비 · ac 판정 · rc 후딜 (60fps) / dmg = 웃음 수치 */
@@ -169,7 +185,9 @@ const ENEMY_MOVES={
   paw  :{su:10,ac:4,rc:26,dmg:5 ,reach:40,zTol:26,sfx:'pop'},
   yawn :{su:24,ac:8,rc:40,dmg:8 ,reach:60,zTol:30,sfx:'pop'},
   swing:{su:16,ac:7,rc:30,dmg:7 ,reach:74,zTol:30,sfx:'pop'},
-  roll :{su:14,ac:14,rc:36,dmg:8 ,reach:52,zTol:30,dash:5.5,sfx:'pop'}
+  roll :{su:14,ac:14,rc:36,dmg:8 ,reach:52,zTol:30,dash:5.5,sfx:'pop'},
+  /* 둥실 심통이 — 한참 준비하다가 쏙 내려와 콩 부딪히고 다시 떠오른다 (dip) */
+  bop  :{su:28,ac:8 ,rc:34,dmg:4 ,reach:46,zTol:28,dip:1,sfx:'pop'}
 };
 
 /* -------------------------------------------------------------- 캐릭터 정의 */
@@ -183,38 +201,41 @@ const CHARS={
   bear:{key:'bear',name:'졸린 곰',mood:125,sp:1.3,zsp:0.9,w:56,r:38,ears:'bear',
     move:'yawn',pal:{body:'#d9b48a',dark:'#b78f68',face:'#4a3550'}},
   boss:{key:'boss',name:'잠투정 대왕',mood:360,sp:1.6,zsp:1.2,w:76,r:54,ears:'cap',boss:1,
-    move:'swing',pal:{body:'#a9c4e8',dark:'#7f9fce',face:'#3b3350'}}
+    move:'swing',pal:{body:'#a9c4e8',dark:'#7f9fce',face:'#3b3350'}},
+  /* 둥실 심통이 — 공중에 떠 있어서 바닥에서는 손이 안 닿는다. 점프하거나 방울로 웃긴다. */
+  puff:{key:'puff',name:'둥실 심통이',mood:40,sp:1.4,zsp:1.0,w:38,r:22,fluff:1,hover:64,
+    move:'bop' ,pal:{body:'#bfe2f2',dark:'#93c3dc',face:'#4a3550'}}
 };
 
 /* --------------------------------------------------------------- 장면 구성 */
 const SCENES=[
   {name:'놀이터', len:2900,
    waves:[{x:520,e:[['cat',760,410],['dust',900,470]]},
-          {x:1450,e:[['dust',1650,395],['cat',1740,478]]},
+          {x:1450,e:[['dust',1650,395],['puff',1720,436],['cat',1740,478]]},
           {x:2250,e:[['bear',2450,440],['cat',2530,400]]}],
    items:[[520,378,'모자','hide'],[1880,498,'풍선','hide'],[2450,440,'인형','carry']],
    props:[[980,470,'feather'],[2050,392,'rattle']]},
   {name:'시장 골목', len:3000,
    waves:[{x:500,e:[['cat',700,400],['cat',790,472]]},
-          {x:1400,e:[['bear',1620,442],['dust',1700,392]]},
+          {x:1400,e:[['bear',1620,442],['dust',1700,392],['puff',1760,470]]},
           {x:2350,e:[['cat',2550,400],['dust',2630,480],['cat',2700,436]]}],
    items:[[860,502,'귤','hide'],[1980,376,'양말','hide'],[1700,392,'호떡','carry']],
    props:[[420,436,'watering_can'],[2200,470,'feather']]},
   {name:'강변 노을', len:3100,
    waves:[{x:540,e:[['dust',740,396],['cat',840,480]]},
           {x:1500,e:[['cat',1700,400],['dust',1790,474],['cat',1860,436]]},
-          {x:2450,e:[['bear',2650,398],['bear',2740,478]]}],
+          {x:2450,e:[['bear',2650,398],['puff',2700,430],['bear',2740,478]]}],
    items:[[1180,374,'조개','hide'],[2280,504,'솔방울','hide'],[1790,474,'연','carry']],
    props:[[700,500,'balloon'],[1950,430,'watering_can'],[2600,384,'rattle']]},
   {name:'목욕탕', len:2900,
    waves:[{x:500,e:[['bear',720,442],['cat',810,394]]},
-          {x:1400,e:[['dust',1600,398],['dust',1690,480]]},
+          {x:1400,e:[['puff',1580,440],['dust',1600,398],['dust',1690,480]]},
           {x:2250,e:[['bear',2460,436],['cat',2540,392],['cat',2600,486]]}],
    items:[[760,376,'오리','hide'],[2050,500,'수건','hide'],[1600,398,'비누','carry']],
    props:[[1150,470,'watering_can'],[2350,380,'balloon']]},
   {name:'잠자리', len:3000,
    waves:[{x:480,e:[['cat',680,400],['dust',770,472]]},
-          {x:1350,e:[['dust',1560,392],['cat',1640,482],['dust',1720,436]]},
+          {x:1350,e:[['dust',1560,392],['cat',1640,482],['puff',1700,404],['dust',1720,436]]},
           {x:2250,e:[['boss',2500,450]]}],
    items:[[1050,374,'베개','hide'],[2050,502,'토끼','hide'],[1640,482,'별','carry']],
    props:[[600,440,'rattle'],[1850,400,'feather'],[2350,470,'balloon']]}
@@ -369,7 +390,8 @@ function actionLabels(){
   else {
     if(grabbable(p)) z='간지럼 · 꾹=안기';
     if(p.prop){ x=PROPS[p.prop].name+' 쓰기'; j='소품 놓기'; }
-    else if(propUnderfoot()) x='줍기';
+    else { if(propUnderfoot()) x='줍기';
+           if(p.state==='run'&&p.y===0) j='대시'; }
   }
   return {z,x,j};
 }
@@ -378,7 +400,7 @@ function syncButtons(){
   const L=actionLabels();
   const z=(L.z==='간지럼 · 꾹=안기'?'간지럼<br>꾹=안기':'간지럼<br>Z');
   const x=(L.x==='방울'?'방울<br>X':L.x.replace(' 쓰기','')+'<br>X');
-  const j=(L.j==='점프'?'↑':L.j.replace('소품 ','')+'<br>↑');
+  const j=(L.j==='점프'?'↑':L.j==='대시'?'대시<br>↑':L.j.replace('소품 ','')+'<br>↑');
   const sig=z+'|'+x+'|'+j;
   if(sig===syncButtons.last) return; syncButtons.last=sig;
   try{ const g=id=>document.getElementById(id);
@@ -423,7 +445,11 @@ function start(e,k,tbl){ const a=(tbl||M)[k]; if(!a)return false;
   e.state='attack';e.act=k;e.ad=a;e.st=0;e.hl=[];e.cc=false;e.vx=0;e.vz=0;
   setAn(e,a.an||'idle'); if(a.inv)e.inv=Math.max(e.inv,a.su+a.ac+8); return true; }
 
+/* 높이 판정은 일부러 비대칭이다 — 아래로는 제한이 없고 위로만 yTol 까지 닿는다.
+   그래야 (1) 바닥에서 떠 있는 심통이한테 손이 안 닿고 (2) 점프해서 때리는 건 그대로 되고
+   (3) 뛰어넘는 동안엔 안 맞는다. 대칭으로 만들면 공중 간지럼이 통째로 빗나간다. */
 function inR(a,t,d){ if(Math.abs(a.z-t.z)>(d.zTol||28))return false;
+  if((t.y||0)-(a.y||0)>(d.yTol||34))return false;
   const dx=(t.x-a.x)*a.facing; return dx>-14&&dx<(d.reach||40)+((t.def.w||26)+a.def.w)*0.4; }
 
 function laugh(t,amt,src,opt){
@@ -449,6 +475,7 @@ function hurtPlayer(dmg){
 /* 안아주기 → 빙글빙글 */
 function grabbable(e){ let b=null,bd=1e9;
   for(const t of ents){ if(t===e||t.gone||!t.foe||t.state==='happy'||t.grabbedBy)continue;
+    if((t.y||0)-(e.y||0)>34)continue;                 // 떠 있는 애는 내려올 때만 안을 수 있다
     const dx=(t.x-e.x)*e.facing,dz=Math.abs(t.z-e.z);
     if(dx>-8&&dx<44+t.def.r*0.6&&dz<26&&dx<bd){b=t;bd=dx;} } return b; }
 function doGrab(a,t){ a.grabbing=t;t.grabbedBy=a;a.gT=0;a.state='grab';t.state='held';
@@ -463,6 +490,8 @@ function toss(a,back){ const t=a.grabbing; if(!t)return; const dir=back?-a.facin
 
 /* ------------------------------------------------------------ 플레이어 */
 function pIn(){ const p=player;
+  if(p.dashT>0){ if(p.y<=0){ p.dashT=0; sparkle(p.x-p.facing*12,p.z-8,'#e9dff2',6); snd('pop'); }
+    else { p.dashT--; if(p.dashT%3===0) sparkle(p.x-p.facing*16,p.z-p.y-34,'#dff6ff',2); } }
   if(p.state==='sulk'){ p.st++; p.vx*=0.8;
     if(p.st>150){ p.state='idle';p.st=0;p.heartNow=p.heartMax*0.7;p.inv=90;
       fx.push({k:'ring',x:p.x,z:p.z,t:30,t0:30}); snd('get'); } return; }
@@ -519,8 +548,13 @@ function pIn(){ const p=player;
     return; }
   if(hit.Space&&p.y===0&&['idle','walk','run'].includes(p.state)){
     const pr=p.prop; if(pr) dropProp(p);            // 점프하면 들고 있던 소품을 그 자리에 둔다
-    p.vy=-10.2*(pr&&PROPS[pr].jump?PROPS[pr].jump:1);
-    p.y=0.1;p.state='air';setAn(p,'jump');snd('sparkle');return; }
+    const dash=(p.state==='run'&&!pr);              // 달리는 중에 점프 = 대시 (앞으로 쭉)
+    p.vy=-(dash?11.4:10.2)*(pr&&PROPS[pr].jump?PROPS[pr].jump:1);
+    p.y=0.1;p.state='air';setAn(p,dash?'dash':'jump');
+    if(dash){ p.vx=p.facing*p.def.sp*2.6; p.dashT=26; snd('blow2');
+      sparkle(p.x-p.facing*14,p.z-26,'#dff6ff',8); shake=2; }
+    else snd('sparkle');
+    return; }
 
   if(['idle','walk','run','air'].includes(p.state)){
     let mx=0,mz=0, far=0;
@@ -540,7 +574,9 @@ function pIn(){ const p=player;
       if(p.state!=='air')p.state=(mx||mz)?(run?'run':'walk'):'idle';
       setAn(p, p.prop ? (p.state==='idle'?'carryIdle':'carryWalk')
                       : (p.state==='idle'?'idle':'walk'));
-    } else { p.vx=clamp(p.vx+mx*0.25,-s,s); if(mx)p.facing=mx; } }
+    }
+    else if(p.dashT>0){ if(mx)p.facing=Math.sign(mx); }   // 대시 중엔 속도를 안 깎는다
+    else { p.vx=clamp(p.vx+mx*0.25,-s,s); if(mx)p.facing=Math.sign(mx); } }
 }
 function dropProp(p){
   if(!p.prop)return;
@@ -626,7 +662,7 @@ function upEnt(e){
 
   if(e.state==='held'){ const a=e.grabbedBy;
     if(!a){e.state='idle';return;}
-    e.x=a.x+a.facing*(a.def.w*0.5+e.def.r*0.7+6); e.z=a.z; e.facing=-a.facing;
+    e.x=a.x+a.facing*(a.def.w*0.5+e.def.r*0.7+6); e.z=a.z; e.y=a.y; e.facing=-a.facing;
     e.mash++; return; }
   if(e.state==='grab'){ e.gT++;e.vx=0;e.vz=0; const t=e.grabbing;
     if(!t||t.gone||e.gT>340){release(e);} return; }
@@ -668,7 +704,17 @@ function upEnt(e){
   else if(e.state==='air'){ e.vy+=GRAV;e.y-=e.vy;
     if(e.y<=0){e.y=0;e.vy=0;e.state='idle';} }
 
-  if(e.y>0&&!['tossed','happy','air'].includes(e.state)){ e.vy+=GRAV;e.y-=e.vy;
+  if(e.def.hover&&!['tossed','happy','held'].includes(e.state)){
+    // 둥실 심통이는 중력을 안 받는다. 공격할 때만 쏙 내려왔다가 다시 떠오른다.
+    const d=(e.state==='attack')?e.ad:null;
+    let k=0;
+    if(d&&d.dip) k = e.st<=d.su ? e.st/Math.max(1,d.su)
+                 : e.st<=d.su+d.ac ? 1
+                 : Math.max(0,1-(e.st-d.su-d.ac)/Math.max(1,d.rc));
+    const want=e.def.hover*(1-k*0.94)+Math.sin(frame*0.05+e.id*1.3)*4;
+    e.y+=(want-e.y)*0.3; e.vy=0;
+    if(e.state==='air')e.state='idle'; }
+  else if(e.y>0&&!['tossed','happy','air'].includes(e.state)){ e.vy+=GRAV;e.y-=e.vy;
     if(e.y<=0){e.y=0;e.vy=0; if(e.state!=='attack')e.state='idle';} }
 
   e.x+=e.vx; e.z=clamp(e.z+e.vz,FLOOR_TOP,FLOOR_BOT);
@@ -679,6 +725,7 @@ function sep(){ for(let i=0;i<ents.length;i++)for(let j=i+1;j<ents.length;j++){
   const a=ents[i],b=ents[j]; if(a.gone||b.gone)continue;
   if(['happy','tossed','held'].includes(a.state)||['happy','tossed','held'].includes(b.state))continue;
   if(Math.abs(a.z-b.z)>18)continue;
+  if(Math.abs((a.y||0)-(b.y||0))>40)continue;        // 머리 위로 떠 있는 애는 안 밀친다
   const md=(a.def.w+b.def.w)*0.5,dx=b.x-a.x,ad=Math.abs(dx);
   if(ad<md&&ad>0.01){const pu=(md-ad)/2;
     a.x-=Math.sign(dx)*pu*(a===player?0.6:1); b.x+=Math.sign(dx)*pu*(b===player?0.6:1);} }
@@ -898,7 +945,7 @@ function drawBlob(e){
   const sx=e.x-camX, sy=e.z, sc=(0.85+(e.z-FLOOR_TOP)/(FLOOR_BOT-FLOOR_TOP)*0.25)*(1+e.pop*0.012);
   X.fillStyle='rgba(90,70,110,0.22)';X.beginPath();
   X.ellipse(sx,sy,e.def.r*0.85*sc,7*sc,0,0,7);X.fill();
-  const A=MOBART, set=A[e.key];
+  const A=MOBART, set=A[e.def.art||e.key];
   if(A.img&&A.img.complete&&A.img.naturalWidth&&set){
     const r=e.def.r, S=r*2.6*sc, C=A.cell;
     const m=Math.min(1,e.mood/e.maxMood);
@@ -1101,6 +1148,8 @@ function drawHelp(){
     ['X','비눗방울. 소품 위에서는 줍기, 소품을 들었으면 소품 쓰기'],
     ['↓ + X','바닥으로 굴러가는 낮은 방울'],
     ['Space','점프. 소품을 들고 있으면 그 자리에 내려놓습니다'],
+    ['달리다가 Space','대시 — 앞으로 쭉 날아갑니다'],
+    ['둥실 심통이','공중에 떠 있어요. 점프해서 간지럽히거나 방울을 불어주세요'],
     ['← → + Z','달려가 껴안기'],
     ['← → + X','커다란 방울 (여러 번 맞습니다)'],
     ['Z + X 동시','노래 — 화면 안의 심통이가 모두 웃습니다 (마음 게이지 100)'],
@@ -1108,10 +1157,12 @@ function drawHelp(){
     ['휴대폰','한쪽 동그라미를 밀어 이동 (끝까지 밀면 달리기) · 반대쪽 버튼으로 간지럼·방울·점프'],
     ['둘이 하기','아이는 아무 키나 누르면 요정이 반짝입니다'],
   ];
-  rows.forEach((r,i)=>{ const y=104+i*30;
-    X.textAlign='right'; X.font='800 14px system-ui'; X.fillStyle='#ffd166';
+  // 줄이 늘면 아래 안내와 겹친다. 간격은 남는 높이에 맞춰 자동으로 좁힌다.
+  const gap=Math.min(30,(H-150-96)/Math.max(1,rows.length-1));
+  rows.forEach((r,i)=>{ const y=96+i*gap;
+    X.textAlign='right'; X.font='800 13px system-ui'; X.fillStyle='#ffd166';
     X.fillText(r[0],330,y);
-    X.textAlign='left'; X.font='700 14px system-ui'; X.fillStyle='#fff';
+    X.textAlign='left'; X.font='700 13px system-ui'; X.fillStyle='#fff';
     X.fillText(r[1],352,y); });
   X.textAlign='center'; X.font='700 14px system-ui'; X.fillStyle='#ffd9e6';
   X.fillText('숨은 물건 3개를 찾으면 오른쪽 끝에 빛이 생깁니다',W/2,H-48);
