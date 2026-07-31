@@ -64,7 +64,7 @@ const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
 const EXPOSE = `
 global.__game = {
   step, render, hit, keys,
-  stickHold, stickMove, stickRelease, get stick(){return stick},
+  stickHold, stickMove, stickRelease, get stick(){return stick}, mk,
   get mode(){return mode}, get player(){return player}, get ents(){return ents},
   get items(){return items}, get wprops(){return wprops}, get sceneIdx(){return sceneIdx},
   get exitOpen(){return exitOpen}, get helpOpen(){return helpOpen},
@@ -136,6 +136,45 @@ try {
   G.stickRelease();
   for (let i = 0; i < 20; i++) tick();
   check('손을 떼면 멈춘다', !G.stick.on && Math.abs(G.player.x - s3) < 6);
+
+  // 둥실 심통이 — 바닥에서는 안 닿고, 점프하면 닿는다 (웨이브가 뜨기 전에 확인)
+  const settle = () => { for (let i = 0; i < 80 && G.player.state !== 'idle'; i++) tick(); };
+  const puff = G.mk('puff', G.player.x + 40, G.player.z);
+  puff.cool = 99999;                                    // 테스트 중엔 공격(내려오기) 금지
+  G.ents.push(puff);
+  for (let i = 0; i < 50; i++) tick();
+  check('둥실 심통이는 공중에 떠 있다', puff.y > 40, 'y=' + Math.round(puff.y));
+
+  const m0 = puff.mood;
+  for (let n = 0; n < 4; n++) { press('KeyZ'); settle(); }
+  check('바닥에서 간지럽히면 안 닿는다',
+    puff.mood === m0 && G.player.facing === 1 && !G.player.grabbing,
+    'facing=' + G.player.facing);
+
+  settle();
+  press('Space');
+  for (let i = 0; i < 6; i++) tick();
+  const jy = G.player.y;
+  press('KeyZ');
+  for (let i = 0; i < 16; i++) tick();
+  check('점프해서 간지럽히면 닿는다', puff.mood > m0,
+    `y=${Math.round(jy)}, ${m0} → ${Math.round(puff.mood)}`);
+  puff.gone = true; tick();
+  while (G.player.y > 0) tick();
+  settle();
+
+  // 대시 — 달리는 중에 점프하면 앞으로 쭉
+  G.stickHold(SX + SR, SY);
+  for (let i = 0; i < 25; i++) tick();
+  const wasRun = G.player.state === 'run';
+  press('Space');
+  const vxDash = G.player.vx, dashT = G.player.dashT;
+  G.stickRelease();
+  check('달리는 중 점프하면 대시가 나간다',
+    wasRun && dashT > 0 && vxDash > G.player.def.sp * 2, 'vx=' + vxDash.toFixed(1));
+  let air = 0; while (G.player.y > 0 && air++ < 200) tick();
+  check('대시가 끝나면 착지하고 풀린다', G.player.y === 0 && G.player.dashT === 0 && air < 200);
+  for (let i = 0; i < 10; i++) tick();
 
   hold('ArrowRight', 400);
   check('오른쪽으로 이동한다', G.player.x > 200, 'x=' + Math.round(G.player.x));
