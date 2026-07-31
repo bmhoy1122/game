@@ -25,37 +25,52 @@
     display:flex;align-items:center;justify-content:center;
     font-weight:800;color:#4a3550;text-align:center;line-height:1.15}
   .pad:active{background:rgba(255,176,58,0.8);border-color:#ff9c4a}
-  .dpad{display:none}
   .btn{width:60px;height:60px;font-size:12px}
   #bF{background:rgba(255,240,180,0.6);border-color:#ffd166;display:none}
   .pad.ready{background:rgba(255,209,102,0.8);border-color:#ff9c4a}
   body.touch #touch{display:block}
   body.coop #bF{display:flex}
 
-  /* 세로 — 게임 화면 아래 빈 공간, 기본은 왼손 */
+  /* 한 손가락 방향 조이스틱 — 기능 버튼 반대편에 둔다 */
+  #stick{position:absolute;display:none;pointer-events:auto;
+    touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;
+    border-radius:50%;background:rgba(255,255,255,0.22);border:2px solid rgba(255,255,255,0.5)}
+  #stick.on{background:rgba(255,209,102,0.28);border-color:#ffb03a}
+  #knob{position:absolute;left:50%;top:50%;width:46%;height:46%;margin:-23% 0 0 -23%;
+    border-radius:50%;pointer-events:none;transition:transform .09s ease-out;
+    background:rgba(255,255,255,0.66);border:2px solid rgba(255,255,255,0.9);
+    box-shadow:0 2px 8px rgba(0,0,0,0.18)}
+  #stick.on #knob{background:rgba(255,176,58,0.92);border-color:#ff9c4a;transition:none}
+  body.touch #stick{display:block}
+
+  /* 세로 — 게임 화면 아래 빈 공간, 기본은 왼손(기능 버튼 왼쪽 · 스틱 오른쪽) */
   @media (orientation:portrait){
     body.touch #touch{position:fixed;inset:0}
     body.touch .btn{width:19vw;height:19vw;font-size:3.3vw}
     body.touch #bZ{left:5vw;  bottom:6vh}
     body.touch #bX{left:27vw; bottom:6vh}
-    body.touch #bJ{left:16vw; bottom:calc(6vh + 21vw);font-size:5vw}
-    body.touch #bF{right:6vw; bottom:calc(6vh + 8vw);width:16vw;height:16vw;font-size:2.9vw}
+    body.touch #bF{left:5vw;  bottom:calc(6vh + 21vw);width:16vw;height:16vw;font-size:2.9vw}
+    body.touch #stick{right:4vw; bottom:5vh; width:34vw; height:34vw}
+    body.touch #bJ{right:12vw; bottom:calc(5vh + 36vw);font-size:5vw}
     body.touch.righty #bZ{left:auto;right:5vw}
     body.touch.righty #bX{left:auto;right:27vw}
-    body.touch.righty #bJ{left:auto;right:16vw}
-    body.touch.righty #bF{right:auto;left:6vw}
+    body.touch.righty #bF{left:auto;right:5vw}
+    body.touch.righty #stick{right:auto;left:4vw}
+    body.touch.righty #bJ{right:auto;left:12vw}
   }
-  /* 가로 — 게임 위에 얹되 한쪽 구석으로 */
+  /* 가로 — 게임 위에 얹되 양쪽 구석으로 */
   @media (orientation:landscape){
     body.touch .btn{height:23%;width:auto;aspect-ratio:1;font-size:clamp(9px,1.8vh,14px)}
     body.touch #bZ{left:2%; bottom:5%}
     body.touch #bX{left:16%;bottom:5%}
-    body.touch #bJ{left:9%; bottom:31%;height:19%;font-size:clamp(11px,2.2vh,17px)}
-    body.touch #bF{right:4%;bottom:5%;height:19%}
+    body.touch #bF{left:2%; bottom:33%;height:19%}
+    body.touch #stick{right:2%;bottom:5%;height:40%;width:auto;aspect-ratio:1}
+    body.touch #bJ{right:6%;bottom:50%;height:19%;font-size:clamp(11px,2.2vh,17px)}
     body.touch.righty #bZ{left:auto;right:2%}
     body.touch.righty #bX{left:auto;right:16%}
-    body.touch.righty #bJ{left:auto;right:9%}
-    body.touch.righty #bF{right:auto;left:4%}
+    body.touch.righty #bF{left:auto;right:2%}
+    body.touch.righty #stick{right:auto;left:2%}
+    body.touch.righty #bJ{right:auto;left:6%}
   }
 </style>
 </head>
@@ -63,11 +78,10 @@
 <div id="wrap"><div id="stage">
   <canvas id="cv" width="960" height="540"></canvas>
   <div id="touch">
-    <div class="pad dpad" id="bL">◀</div><div class="pad dpad" id="bR">▶</div>
-    <div class="pad dpad" id="bU">▲</div><div class="pad dpad" id="bD">▼</div>
     <div class="pad btn" id="bZ">간지럼<br>Z</div><div class="pad btn" id="bX">방울<br>X</div>
     <div class="pad btn" id="bJ">↑</div>
     <div class="pad btn" id="bF">요정<br>반짝</div>
+    <div id="stick"><div id="knob"></div></div>
   </div>
 </div></div>
 <script>
@@ -240,13 +254,12 @@ function pad(id,code){ const el=document.getElementById(id); if(!el)return;
   ['touchend','touchcancel','mouseup','mouseleave'].forEach(t=>el.addEventListener(t,off));}
 const COARSE=matchMedia('(pointer:coarse)').matches;
 if(COARSE) document.body.classList.add('touch');
-applyHand();
-pad('bL','ArrowLeft');pad('bR','ArrowRight');pad('bU','ArrowUp');pad('bD','ArrowDown');
 pad('bZ','KeyZ');pad('bX','KeyX');pad('bJ','Space');pad('bF','FAIRY');
 
 /* 캐릭터 기준 탭·꾹눌러 이동 (모바일/마우스 공용) */
 let nav=null, usingTouch=false, righty=false;
 try{ righty = localStorage.getItem('handed')==='R'; }catch(e){}
+applyHand();   // 선언보다 먼저 부르면 righty 가 TDZ 라 try/catch 에 삼켜진다. 순서 유지.
 function applyHand(){ try{ document.body.classList.toggle('righty',righty);
   localStorage.setItem('handed',righty?'R':'L'); }catch(e){} }
 function toCanvas(cx,cy){ const r=CV.getBoundingClientRect();
@@ -275,8 +288,43 @@ CV.addEventListener('pointermove',e=>{ if(nav&&nav.hold){e.preventDefault();navM
 CV.addEventListener('pointerup',e=>{e.preventDefault();navEnd();});
 CV.addEventListener('pointercancel',()=>{nav=null;});
 
-const LEFT=()=>keys.ArrowLeft||keys.KeyA, RIGHT=()=>keys.ArrowRight||keys.KeyD;
-const UPK =()=>keys.ArrowUp||keys.KeyW,   DOWNK=()=>keys.ArrowDown||keys.KeyS;
+/* 한 손가락 조이스틱 — 중심에서 민 방향이 곧 이동 방향 (화면 기준, 캐릭터 기준이 아니다) */
+const stick={on:false,mx:0,mz:0,mag:0,id:null};
+const STICK_DEAD=0.22;      // 중심 근처는 무시 (손가락을 얹어만 둬도 안 움직인다)
+const stickEl=document.getElementById('stick'), knobEl=document.getElementById('knob');
+function stickGeom(){ const r=stickEl.getBoundingClientRect();
+  return {cx:r.left+r.width/2, cy:r.top+r.height/2, lim:Math.max(1,r.width*0.30)}; }
+function stickMove(cx,cy){ if(!stickEl)return;
+  const g=stickGeom(); let ox=cx-g.cx, oy=cy-g.cy;
+  const d=Math.hypot(ox,oy); if(d>g.lim){ ox*=g.lim/d; oy*=g.lim/d; }
+  if(knobEl) knobEl.style.transform='translate('+ox.toFixed(1)+'px,'+oy.toFixed(1)+'px)';
+  const nx=ox/g.lim, ny=oy/g.lim, raw=Math.min(1,Math.hypot(nx,ny));
+  if(raw<STICK_DEAD){ stick.mx=stick.mz=stick.mag=0; return; }
+  const k=((raw-STICK_DEAD)/(1-STICK_DEAD))/raw;      // 데드존만큼 깎고 다시 0~1로 편다
+  let ax=nx*k, ay=ny*k;
+  if(Math.abs(ay)<Math.abs(ax)*0.36) ay=0;            // 가로로 밀면 위아래는 흘린다
+  if(Math.abs(ax)<Math.abs(ay)*0.30) ax=0;
+  stick.mx=clamp(ax,-1,1); stick.mz=clamp(ay,-1,1); stick.mag=(raw-STICK_DEAD)/(1-STICK_DEAD); }
+function stickHold(cx,cy){ stick.on=true; usingTouch=true; nav=null;
+  if(stickEl) stickEl.classList.add('on'); stickMove(cx,cy); }
+function stickRelease(){ stick.on=false; stick.id=null; stick.mx=stick.mz=stick.mag=0;
+  if(knobEl) knobEl.style.transform='translate(0px,0px)';
+  if(stickEl) stickEl.classList.remove('on'); }
+if(stickEl){
+  stickEl.addEventListener('pointerdown',e=>{ if(stick.on&&stick.id!==e.pointerId)return;
+    stick.id=e.pointerId;
+    if(stickEl.setPointerCapture)try{stickEl.setPointerCapture(e.pointerId);}catch(_){}
+    stickHold(e.clientX,e.clientY); });
+  stickEl.addEventListener('pointermove',e=>{
+    if(stick.on&&stick.id===e.pointerId) stickMove(e.clientX,e.clientY); });
+  ['pointerup','pointercancel','lostpointercapture'].forEach(t=>
+    stickEl.addEventListener(t,e=>{ if(stick.id===e.pointerId) stickRelease(); }));
+}
+
+const LEFT=()=>keys.ArrowLeft||keys.KeyA||stick.mx<-0.35;
+const RIGHT=()=>keys.ArrowRight||keys.KeyD||stick.mx>0.35;
+const UPK =()=>keys.ArrowUp||keys.KeyW||stick.mz<-0.35;
+const DOWNK=()=>keys.ArrowDown||keys.KeyS||stick.mz>0.35;
 let dirLog=[];
 function logDir(d){const l=dirLog[dirLog.length-1]; if(l&&l.d===d&&frame-l.f<3)return;
   dirLog.push({d,f:frame}); if(dirLog.length>6)dirLog.shift();}
@@ -476,16 +524,18 @@ function pIn(){ const p=player;
 
   if(['idle','walk','run','air'].includes(p.state)){
     let mx=0,mz=0, far=0;
-    if(LEFT())mx--; if(RIGHT())mx++; if(UPK())mz--; if(DOWNK())mz++;
-    if(!mx&&!mz&&nav){
-      if(nav.tap&&frame>nav.exp) nav=null;
-      else {
-        const dx=nav.wx-p.x, dz=nav.wz-p.z;
-        far=Math.hypot(dx,dz*1.4);
-        if(far<18){ if(nav.tap) nav=null; }
-        else { mx=clamp(dx/44,-1,1); mz=clamp(dz/34,-1,1);
-               if(Math.abs(dx)<12) mx=0; if(Math.abs(dz)<10) mz=0; } } }
-    const run=(dbl()&&mx===dbl())||far>250, s=p.def.sp*(run?1.7:1);
+    if(stick.on){ mx=stick.mx; mz=stick.mz; nav=null; }   // 조이스틱이 최우선
+    else {
+      if(LEFT())mx--; if(RIGHT())mx++; if(UPK())mz--; if(DOWNK())mz++;
+      if(!mx&&!mz&&nav){
+        if(nav.tap&&frame>nav.exp) nav=null;
+        else {
+          const dx=nav.wx-p.x, dz=nav.wz-p.z;
+          far=Math.hypot(dx,dz*1.4);
+          if(far<18){ if(nav.tap) nav=null; }
+          else { mx=clamp(dx/44,-1,1); mz=clamp(dz/34,-1,1);
+                 if(Math.abs(dx)<12) mx=0; if(Math.abs(dz)<10) mz=0; } } } }
+    const run=(dbl()&&mx===dbl())||far>250||stick.mag>0.85, s=p.def.sp*(run?1.7:1);
     if(p.y===0){ p.vx=mx*s;p.vz=mz*p.def.zsp*(run?1.25:1); if(mx)p.facing=Math.sign(mx);
       if(p.state!=='air')p.state=(mx||mz)?(run?'run':'walk'):'idle';
       setAn(p, p.prop ? (p.state==='idle'?'carryIdle':'carryWalk')
@@ -1055,6 +1105,7 @@ function drawHelp(){
     ['← → + X','커다란 방울 (여러 번 맞습니다)'],
     ['Z + X 동시','노래 — 화면 안의 심통이가 모두 웃습니다 (마음 게이지 100)'],
     ['C / V','안기 / 소품 줍기·놓기 (따로 쓰고 싶을 때)'],
+    ['휴대폰','한쪽 동그라미를 밀어 이동 (끝까지 밀면 달리기) · 반대쪽 버튼으로 간지럼·방울·점프'],
     ['둘이 하기','아이는 아무 키나 누르면 요정이 반짝입니다'],
   ];
   rows.forEach((r,i)=>{ const y=104+i*30;
@@ -1094,7 +1145,9 @@ function drawTitle(){
     X.fillStyle=on?'#6b4a70':'#ffffffcc';X.font='800 19px system-ui';X.fillText(t,W/2,y+2);
     if(on){X.fillStyle='#e88b6a';X.fillText('▶',W/2-192,y+2);} });
   X.font='700 13px system-ui';X.fillStyle='#6b4a70';
-  X.fillText('↑↓ 로 고르고 ENTER  ·  휴대폰은 줄을 직접 탭  ·  게임 중엔 화면을 탭·꾹 눌러 이동',W/2,452);
+  X.fillText(COARSE
+    ? '줄을 직접 탭해서 고르세요  ·  게임 중엔 '+(righty?'왼쪽':'오른쪽')+' 동그라미를 밀어 이동 (화면을 탭해도 이동)'
+    : '↑↓ 로 고르고 ENTER  ·  휴대폰은 줄을 직접 탭  ·  게임 중엔 화면을 탭·꾹 눌러 이동',W/2,452);
   X.fillText('간지럼 Z (꾹 누르면 안기)  ·  방울 X (소품 위에선 줍기)  ·  점프 SPACE (= 소품 놓기)',W/2,478);
   X.fillText('←→+Z 달려가 껴안기  ·  ←→+X 커다란 방울  ·  Z+X 노래  ·  잡은 뒤 X 던지기 / 점프 놓아주기',W/2,502);
   X.font='700 12px system-ui';X.fillStyle='#7a5570';

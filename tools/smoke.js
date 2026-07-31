@@ -52,7 +52,7 @@ global.document = {
 global.window = global;
 global.matchMedia = () => ({ matches: false });     // 데스크톱으로 가정
 global.addEventListener = noop;
-global.localStorage = { _d: {}, getItem(k) { return this._d[k] ?? null; }, setItem(k, v) { this._d[k] = v; } };
+global.localStorage = { _d: { handed: 'R' }, getItem(k) { return this._d[k] ?? null; }, setItem(k, v) { this._d[k] = v; } };
 global.Image = class { constructor() { this.complete = true; this.naturalWidth = 672; } set src(v) {} get src() { return ''; } };
 global.AudioContext = class { constructor() { throw new Error('no audio in node'); } };
 global.performance = { now: () => 0 };
@@ -64,6 +64,7 @@ const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
 const EXPOSE = `
 global.__game = {
   step, render, hit, keys,
+  stickHold, stickMove, stickRelease, get stick(){return stick},
   get mode(){return mode}, get player(){return player}, get ents(){return ents},
   get items(){return items}, get wprops(){return wprops}, get sceneIdx(){return sceneIdx},
   get exitOpen(){return exitOpen}, get helpOpen(){return helpOpen},
@@ -105,8 +106,36 @@ const approachFoe = () => {
 };
 
 try {
+  // applyHand() 를 righty 선언보다 먼저 부르면 TDZ 가 try/catch 에 삼켜져 조용히 무시된다
+  check('저장된 왼손/오른손 설정이 켤 때 반영된다', bodyClasses.has('righty'));
+
   press('Enter');
   check('타이틀에서 게임이 시작된다', G.mode === 'play');
+
+  // 모바일 조이스틱 — 화면 기준 방향. 가짜 캔버스가 960×540 이라 중심(480,270) 반경 288.
+  const SX = 480, SY = 270, SR = 288;
+  const s0 = G.player.x;
+  G.stickHold(SX + SR * 0.6, SY);
+  for (let i = 0; i < 45; i++) tick();
+  const dHalf = G.player.x - s0;
+  check('조이스틱을 민 방향으로 간다', dHalf > 10 && G.player.facing === 1, 'Δx=' + Math.round(dHalf));
+
+  const s1 = G.player.x;
+  G.stickMove(SX + 20, SY);                       // 중심 근처 = 데드존
+  for (let i = 0; i < 20; i++) tick();
+  check('중심 근처(데드존)에서는 안 움직인다', G.stick.mx === 0 && Math.abs(G.player.x - s1) < 6);
+
+  const s2 = G.player.x;
+  G.stickMove(SX + SR, SY);                       // 끝까지 밀면 달리기
+  for (let i = 0; i < 45; i++) tick();
+  const dFull = G.player.x - s2;
+  check('끝까지 밀면 살짝 밀 때보다 빠르다', dFull > dHalf * 1.6,
+    Math.round(dHalf) + ' → ' + Math.round(dFull));
+
+  const s3 = G.player.x;
+  G.stickRelease();
+  for (let i = 0; i < 20; i++) tick();
+  check('손을 떼면 멈춘다', !G.stick.on && Math.abs(G.player.x - s3) < 6);
 
   hold('ArrowRight', 400);
   check('오른쪽으로 이동한다', G.player.x > 200, 'x=' + Math.round(G.player.x));
