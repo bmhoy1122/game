@@ -27,7 +27,7 @@ function memStore() {
 
   // 방 하나를 열고 둘 다 숫자를 정한 상태까지 만든다. 선공 / 후공 토큰을 돌려준다.
   async function newGame(secretA, secretB) {
-    const a = (await call({ action: 'create', name: 'A' })).body;
+    const a = (await call({ action: 'create', name: 'A', pick: 'coin' })).body;
     const b = (await call({ action: 'join', code: a.code, name: 'B' })).body;
     await Promise.all([
       call({ action: 'secret', code: a.code, token: a.token, value: secretA }),
@@ -54,12 +54,24 @@ function memStore() {
     check('숫자가 아니면 거른다', !validNumber('ab3') && !validNumber(null));
 
     // 방 · 숫자 정하기
-    const a = (await call({ action: 'create', name: '민호' })).body;
+    const a = (await call({ action: 'create', name: '민호', pick: 'coin' })).body;
     check('방이 만들어진다', /^\d{4}$/.test(a.code) && a.phase === 'wait');
     const code = a.code, tA = a.token;
     const b = (await call({ action: 'join', code, name: '지유' })).body;
     const tB = b.token;
-    check('들어오면 숫자 정하기부터', b.phase === 'setup' && b.mySecret === null);
+    check('들어오면 숫자 정하기부터 (랜덤 선)', b.phase === 'setup' && b.mySecret === null);
+    // 가위바위보로 정하는 방은 선부터 정해야 숫자를 정할 수 있다
+    const ra = (await call({ action: 'create', pick: 'rps' })).body;
+    const rb = (await call({ action: 'join', code: ra.code })).body;
+    check('가위바위보 방은 선 정하기부터', rb.phase === 'pick');
+    check('선 정하기 전엔 숫자를 못 정한다',
+      (await call({ action: 'secret', code: ra.code, token: rb.token, value: '123' })).status === 409);
+    await Promise.all([
+      call({ action: 'throw', code: ra.code, token: ra.token, value: 'p' }),
+      call({ action: 'throw', code: ra.code, token: rb.token, value: 'r' }),
+    ]);
+    const rs = (await call({ action: 'state', code: ra.code, token: rb.token })).body;
+    check('가위바위보 이긴 쪽이 선공', rs.phase === 'setup' && rs.first === 0);
     const alone = (await call({ action: 'create', name: '혼자' })).body;
     const early = await call({ action: 'secret', code: alone.code, token: alone.token, value: '123' });
     check('상대가 안 들어왔으면 숫자 못 정한다', early.status === 409, early.body.error);
@@ -141,7 +153,7 @@ function memStore() {
       call({ action: 'restart', code: g.code, token: g.tk[1], round: 1 }),
     ]);
     check('둘이 동시에 다시 해도 판은 하나만 올라간다', x.body.round === 2 && y.body.round === 2);
-    check('둘이 같은 선공을 본다', x.body.first === y.body.first);
+    check('둘이 같은 선공을 본다', x.body.first === y.body.first && x.body.first !== null);
     check('새 판은 숫자 정하기부터', x.body.phase === 'setup' && x.body.mySecret === null && x.body.log.length === 0);
 
     check('남의 방은 못 본다', (await call({ action: 'state', code, token: 'nope' })).status === 403);

@@ -10,7 +10,7 @@ const path = require('path');
 
 const ROOT = path.join(__dirname, '..');
 const PORT = Number(process.env.PORT || 8787);
-const GAMES = { bingo: 'bingo-core.mjs', balance: 'balance-core.mjs', baseball: 'baseball-core.mjs' };
+const GAMES = { bingo: 'bingo-core.mjs', balance: 'balance-core.mjs', baseball: 'baseball-core.mjs', gomoku: 'gomoku-core.mjs' };
 const TYPES = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
   '.mjs': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
