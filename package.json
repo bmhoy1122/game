@@ -1,0 +1,8 @@
+{
+  "name": "made-at-home-games",
+  "private": true,
+  "description": "넷리파이 함수용 의존성 하나뿐. 사이트 자체는 여전히 빌드가 없다.",
+  "dependencies": {
+    "@netlify/blobs": "^8.2.0"
+  }
+}

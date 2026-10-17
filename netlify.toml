@@ -1,8 +1,19 @@
-# 빌드 도구 없이 정적 파일만 그대로 올린다.
-# 저장소 루트가 곧 사이트 루트가 된다.
+# 정적 파일은 그대로 올린다. 저장소 루트가 곧 사이트 루트.
+# 빌드 명령은 여전히 없고, 넷리파이가 package.json 을 보고 함수 의존성만 설치한다.
 [build]
   publish = "."
   command = ""
+
+# 커플 빙고의 방 상태를 들고 있는 함수 하나 (POST /api/bingo)
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+# 함수가 config.path 로 /api/bingo 를 잡지만, 구버전 대비로 경로도 열어둔다.
+[[redirects]]
+  from = "/api/bingo"
+  to = "/.netlify/functions/bingo"
+  status = 200
 
 # 캐시: HTML 은 항상 새로 받고, 그림은 오래 캐시한다.
 [[headers]]
