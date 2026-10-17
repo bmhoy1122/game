@@ -20,6 +20,7 @@
   h1{margin:4px 0 0;font-size:27px;letter-spacing:-.5px;color:#fff;text-align:center;
     text-shadow:0 2px 10px rgba(60,30,10,.35)}
   .sub{margin:0;text-align:center;color:#ffffffd6;font-size:13px;font-weight:600}
+  .leave{display:block;margin:6px auto 0;width:auto;background:none;color:#fff;opacity:.85;font-size:13px;font-weight:700;padding:6px 12px;text-decoration:underline}
 
   .card{background:rgba(255,255,255,.94);border-radius:20px;padding:16px;
     box-shadow:0 10px 30px rgba(60,30,10,.22)}
@@ -78,6 +79,7 @@
 <div id="app">
   <h1>오목</h1>
   <p class="sub" id="sub">다섯 개를 먼저 잇는 사람이 이겨요</p>
+  <button id="b-leave" class="leave hide">방 나가기</button>
   <div id="err" class="hide"></div>
 
   <!-- 1. 시작 -->
@@ -104,6 +106,8 @@
     <div style="height:10px"></div>
     <button class="ghost" id="b-share">초대 링크 복사</button>
     <p class="muted" style="margin-top:14px"><span class="dots">상대를 기다리는 중</span></p>
+    <p class="muted" style="margin:14px 0 10px;font-size:13px">둘 다 방을 만들었다면 한 명은 나가서 상대 코드로 들어가요</p>
+    <button class="ghost" id="b-leave-wait">나가서 다른 코드로 들어가기</button>
   </section>
 
   <!-- 3. 선 정하기 -->
@@ -208,7 +212,8 @@ function poll() {
   const gap = st && st.phase === 'done' ? POLL_SLOW_MS : POLL_MS;
   timer = setTimeout(async () => {
     if (S.code && S.token && document.visibilityState === 'visible' && !busy) {
-      try { adopt(await api('state')); } catch (e) {}
+      const tok = S.token;   // 기다리는 사이 방을 나갔으면 받은 답을 버린다
+      try { const d = await api('state'); if (S.token === tok) adopt(d); } catch (e) {}
     }
     poll();
   }, gap);
@@ -324,6 +329,7 @@ const picker = Picker.mount($('picker'), {
 /* ------------------------------------------------------------------ 그리기 */
 function show(id) {
   ['s-home', 's-wait', 's-pick', 's-game'].forEach((s) => $(s).classList.toggle('hide', s !== id));
+  $('b-leave').classList.toggle('hide', id === 's-home');
 }
 const meName = () => (st && st.name) || S.name || '나';
 const youName = () => (st && st.opponent.name) || '상대';
@@ -423,6 +429,19 @@ $('b-share').onclick = async () => {
 ['name', 'code'].forEach((id) => $(id).addEventListener('keydown', (e) => {
   if (e.key === 'Enter') $(id === 'code' ? 'b-join' : 'b-create').click();
 }));
+
+/* 방 나가기 — 방은 그대로 두고(12시간 뒤 만료) 이 폰에서만 잊는다 */
+function leave() {
+  if (st && st.phase !== 'wait' && st.phase !== 'done' && !confirm('방에서 나갈까요?\n하던 판은 여기서 끝나요')) return;
+  clearTimeout(timer);
+  forget(); ghost = null; drawnKey = null; lastMoves = -1;
+  history.replaceState(null, '', location.pathname);
+  $('code').value = '';
+  render();
+  $('code').focus();
+}
+$('b-leave').onclick = leave;
+$('b-leave-wait').onclick = leave;
 
 /* ------------------------------------------------------------------ 시작 */
 (async function boot() {
