@@ -2,6 +2,15 @@
 
 이 저장소에서 작업할 때 먼저 읽는 문서. 게임 하나가 폴더 하나다.
 
+지금 들어있는 게임은 둘.
+
+| 폴더 | 게임 | 서버 |
+|---|---|---|
+| `evening-night/` | 「어쩐지 좋은 기분이 드는 밤」 — 세 살 아이와 같이 하는 횡스크롤 | 없음 |
+| `couple-bingo/` | 커플 빙고 — 각자 폰에서 방 코드로 만나는 1:1 빙고 | 넷리파이 함수 하나 |
+
+**3장부터 8장까지는 전부 「밤」 게임 이야기다.** 커플 빙고는 9장에 따로 적었다.
+
 ---
 
 ## 1. 이 프로젝트가 무엇인가
@@ -44,11 +53,21 @@
 ├─ netlify.toml          publish = "." / build 없음
 ├─ CLAUDE.md             이 문서
 ├─ README.md
+├─ package.json          넷리파이 함수용 의존성 하나뿐 (사이트는 여전히 빌드 없음)
 ├─ docs/art-guide.md     스프라이트 규격과 아트 발주 방법
-├─ tools/smoke.js        헤드리스 테스트
-└─ evening-night/        게임 하나
-   ├─ index.html         전부 여기 한 파일에 들어 있다 (약 67KB)
-   └─ art/  hero.png  mob.png  prop.png
+├─ tools/
+│  ├─ smoke.js           「밤」 헤드리스 테스트
+│  ├─ sheet.py           그림을 스프라이트 시트에 붙이는 도구
+│  ├─ bingo-smoke.js     커플 빙고 규칙 테스트
+│  └─ bingo-dev.js       커플 빙고 로컬 서버
+├─ netlify/functions/    커플 빙고 방 상태 (POST /api/bingo)
+│  ├─ bingo-core.mjs     규칙 전부. import 가 없어서 그냥 불러 쓸 수 있다
+│  └─ bingo.mjs          넷리파이 껍데기. 여기만 @netlify/blobs 를 안다
+├─ evening-night/        게임 하나
+│  ├─ index.html         전부 여기 한 파일에 들어 있다 (약 67KB)
+│  └─ art/  hero.png  mob.png  prop.png
+└─ couple-bingo/
+   └─ index.html         이것도 한 파일
 ```
 
 넷리파이는 `main` 브랜치를 배포한다. 실험은 다른 브랜치에서 하고
@@ -58,7 +77,9 @@ Branch deploys(`<브랜치>--<사이트>.netlify.app`)로 확인한 뒤 머지�
 ### 확인 방법
 
 ```bash
-node tools/smoke.js                 # 로직 회귀 테스트 (브라우저 불필요)
+node tools/smoke.js                 # 「밤」 로직 회귀 테스트 (브라우저 불필요)
+node tools/bingo-smoke.js           # 커플 빙고 규칙 테스트 (npm install 없이 돈다)
+node tools/bingo-dev.js             # 커플 빙고 로컬 서버 → localhost:8787
 python3 -m http.server 8000         # http://localhost:8000/evening-night/
 ```
 
@@ -251,3 +272,47 @@ GRAV = 0.6          GRAB_HOLD = 20     (Z 꾹 → 안기, 약 0.33초)
 - 조작을 바꿀 땐 `pIn` 하나만 보면 된다. 렌더와 로직이 섞여 있지 않다.
 - 새 기능을 넣으면 `tools/smoke.js`에 확인 항목을 한 줄 추가한다.
 - 이 게임의 사용자는 **세 살**이다. 애매하면 더 단순하고 더 관대한 쪽을 고른다.
+
+---
+
+## 9. 커플 빙고 (`couple-bingo/`)
+
+각자 폰에서 네 자리 방 코드로 만나, 번갈아 1~25 중 하나를 부른다. 부른 숫자는 **두 판 모두**
+체크되고, 가로·세로·대각 **3줄**을 먼저 만들면 이긴다. 떨어져 있어도 된다.
+
+### 서버가 왜 필요한가
+
+이 저장소에서 유일하게 서버가 있는 부분이다. 방 상태(누가 들어왔나 · 누구 차례 ·
+나온 숫자 · 두 사람의 판)를 넷리파이 함수가 Netlify Blobs 에 들고 있다.
+엔드포인트는 `POST /api/bingo` **하나**고, `action` 으로 갈라진다
+(`create` `join` `ready` `call` `state` `restart`).
+
+| 파일 | 역할 |
+|---|---|
+| `netlify/functions/bingo-core.mjs` | 규칙 전부. **import 가 하나도 없다.** 저장소는 `handle(body, store)` 의 인자로 받는다 |
+| `netlify/functions/bingo.mjs` | 넷리파이 껍데기. 여기서만 `@netlify/blobs` 를 붙인다 |
+| `tools/bingo-dev.js` | 같은 `bingo-core.mjs` 에 메모리 저장소를 끼운 로컬 서버 |
+| `tools/bingo-smoke.js` | 같은 파일을 그대로 불러서 규칙만 돌린다 |
+
+규칙을 한 파일로 떼어낸 덕에 **`npm install` 없이** 테스트와 로컬 플레이가 된다.
+의존성이 필요한 건 실제 배포뿐이다.
+
+### 설계에서 건드리면 안 되는 것
+
+- **폴링은 읽기 전용이다.** 클라이언트는 1.4초마다 `state` 만 부른다. Blobs 에 트랜잭션이
+  없어서, 폴링이 쓰기를 하면 두 폰이 동시에 써서 한쪽 변경이 통째로 묻힌다.
+  쓰기는 사용자가 뭘 눌렀을 때만 일어나고, '부르기'는 차례제라 애초에 한 명만 쓸 수 있다.
+- **판은 서버가 들고, 상대 판은 응답에서 뺀다.** 그래야 서버가 줄을 직접 세서 승패를
+  판정한다. 클라이언트가 "나 3줄이야" 하고 알려주는 구조로 바꾸면, 두 사람이 같은 수에
+  동시에 3줄이 됐을 때 무승부 판정이 한 박자 늦는다.
+- **상대에 대해 알려주는 건 줄 수까지.** 실제 빙고에서 "두 줄!" 외치는 것과 같다.
+- 방은 12시간 지나면 없는 것으로 친다. 청소 작업 없이 그냥 만료로 처리한다.
+
+### 겪은 함정
+
+- **`#board` 로 CSS 를 썼는데 실제 id 는 `board-wait` / `board-play` 였다.** 그리드가 통째로
+  안 먹어서 칸이 세로로 한 줄씩 늘어졌다. 지금은 `.board` 클래스다.
+  브라우저 테스트가 5줄×5칸인지, 칸이 정사각형인지 확인한다.
+- **`.who div` 는 자손 전부를 잡는다.** 이름·점수 칸이 이중 박스로 겹쳤다. `.who>div` 로 고쳤다.
+- 새 기능을 넣으면 `tools/bingo-smoke.js` 에 한 줄 추가한다. 화면이 바뀌면 브라우저 두 개로
+  한 판 돌려본다 — 폴링이 1.4초라 테스트에서 차례가 넘어오는 걸 **기다려야** 한다.
