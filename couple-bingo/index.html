@@ -78,6 +78,9 @@
   .muted{color:#a36084;font-size:12.5px;font-weight:700;text-align:center;margin:0}
   .dots::after{content:'';animation:d 1.2s steps(4,end) infinite}
   @keyframes d{0%{content:''}25%{content:'.'}50%{content:'..'}75%{content:'...'}}
+  #picker,body{--pk-accent:#e8577e;--pk-soft:#fbf2f6;--pk-ink:#7a3f60;--pk-mute:#a36084;--pk-line:#e6c9d8}
+  .first{text-align:center;border-radius:14px;padding:10px;font-weight:800;font-size:14px;
+    background:#fff6e0;color:#8a5a1c;margin-bottom:12px}
   a.back{display:block;text-align:center;color:#ffffffc0;font-size:12px;font-weight:700;text-decoration:none;padding:4px}
 </style>
 </head>
@@ -91,7 +94,9 @@
   <section id="s-home" class="card hide">
     <h2>방 만들기</h2>
     <input id="name" maxlength="8" placeholder="내 이름 (선택)" autocomplete="off">
-    <div style="height:10px"></div>
+    <h2 style="margin:16px 0 8px">누가 먼저 할지</h2>
+    <div id="pick-kind"></div>
+    <div style="height:12px"></div>
     <button class="primary" id="b-create">새 방 만들기</button>
     <h2 style="margin-top:22px">코드로 들어가기</h2>
     <input id="code" inputmode="numeric" maxlength="4" placeholder="0000" autocomplete="off">
@@ -99,7 +104,7 @@
     <button class="ghost" id="b-join">들어가기</button>
   </section>
 
-  <!-- 2. 대기 + 판 짜기 -->
+  <!-- 2. 대기 -->
   <section id="s-wait" class="card hide">
     <div class="codebox">
       <div class="t">방 코드</div>
@@ -107,18 +112,27 @@
     </div>
     <div style="height:10px"></div>
     <button class="ghost" id="b-share">초대 링크 복사</button>
-    <p class="muted" id="w-opp" style="margin-top:12px"></p>
-    <h2 style="margin-top:14px">내 판</h2>
+    <p class="muted" style="margin-top:14px"><span class="dots">상대를 기다리는 중</span></p>
+  </section>
+
+  <!-- 3. 선 정하기 -->
+  <section id="s-pick" class="card hide"><div id="picker"></div></section>
+
+  <!-- 4. 판 짜기 -->
+  <section id="s-setup" class="card hide">
+    <div class="first" id="s-first">—</div>
+    <h2>내 판</h2>
     <div id="board-wait" class="board"></div>
     <div style="height:12px"></div>
     <div class="row">
       <button class="ghost" id="b-shuffle">다시 섞기</button>
       <button class="primary" id="b-ready">준비 완료</button>
     </div>
-    <p class="muted" style="margin-top:10px">숫자 1~25를 아무렇게나 깔아요. <b id="w-goal">3</b>줄 먼저 만들면 이겨요.</p>
+    <p class="muted" id="w-opp" style="margin-top:12px"></p>
+    <p class="muted" style="margin-top:6px">숫자 1~25를 아무렇게나 깔아요. <b id="w-goal">3</b>줄 먼저 만들면 이겨요.</p>
   </section>
 
-  <!-- 3. 플레이 -->
+  <!-- 5. 플레이 -->
   <section id="s-play" class="hide" style="display:flex;flex-direction:column;gap:12px">
     <div class="card" style="padding:14px">
       <div class="who" id="p-who">
@@ -133,7 +147,7 @@
     <div class="card"><div id="board-play" class="board"></div></div>
   </section>
 
-  <!-- 4. 결과 -->
+  <!-- 6. 결과 -->
   <section id="s-done" class="card hide">
     <div class="result" id="d-box">
       <div class="big" id="d-big">—</div>
@@ -141,23 +155,23 @@
     </div>
     <div style="height:14px"></div>
     <button class="primary" id="b-again">다시 하기</button>
-    <p class="muted" id="d-wait" style="margin-top:10px"></p>
   </section>
 
   <a class="back" href="../">← 다른 게임</a>
 </div>
+<script src="../couple-common/picker.js"></script>
 <script>
 /* =========================================================================
    커플 빙고 — 각자 폰에서 방 코드로 만나 번갈아 숫자를 부른다.
-   화면 상태는 서버(POST /api/bingo)가 들고 있고, 여기는 그리기만 한다.
+   흐름: 대기 → 선 정하기(미니게임) → 판 짜기 → 번갈아 부르기 → 끝
+   상태는 서버(POST /api/bingo)가 들고 있고, 여기는 그리기만 한다.
    규칙은 netlify/lib/bingo-core.mjs 가 정답이다.
    ========================================================================= */
-const SIZE = 5, CELLS = 25, POLL_MS = 1400, POLL_SLOW_MS = 3200;
+const API = '/api/bingo', SAVE = 'couple-bingo', SIZE = 5, CELLS = 25, POLL_MS = 1400, POLL_SLOW_MS = 3200;
 const $ = (id) => document.getElementById(id);
-const SAVE = 'couple-bingo';
 
 let S = { code: null, token: null, you: null, name: '' };
-let st = null;                 // 서버가 준 마지막 상태
+let st = null;
 let localBoard = null;         // 준비 누르기 전의 내 판
 let timer = null, busy = false, lastSeenCall = null;
 
@@ -166,14 +180,8 @@ async function api(action, extra) {
   const body = { action, code: S.code, token: S.token, ...(extra || {}) };
   let res;
   try {
-    res = await fetch('/api/bingo', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-  } catch (e) {
-    throw new Error('인터넷이 끊긴 것 같아요');
-  }
+    res = await fetch(API, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  } catch (e) { throw new Error('인터넷이 끊긴 것 같아요'); }
   let data = {};
   try { data = await res.json(); } catch (e) {}
   if (!res.ok) {
@@ -186,6 +194,7 @@ function adopt(data) {
   if (data.token) S.token = data.token;
   if (data.code) S.code = data.code;
   if (typeof data.you === 'number') S.you = data.you;
+  if (st && st.round !== data.round) localBoard = null;     // 새 판이면 새로 섞는다
   st = data;
   save();
   render();
@@ -225,7 +234,8 @@ document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && S.code) act(async () => adopt(await api('state')));
 });
 
-/* -------------------------------------------------------------- 판 만들기 */
+/* -------------------------------------------------------------- 판 그리기
+   칸은 한 번만 만들고 상태만 바꾼다. 폴링 때마다 새로 만들면 누르는 도중에 칸이 바뀌어 탭이 씹힌다. */
 function shuffled() {
   const a = [...Array(CELLS)].map((_, i) => i + 1);
   for (let i = a.length - 1; i > 0; i--) {
@@ -247,21 +257,33 @@ function lineCells(board, called) {
   for (const ln of LINES) if (ln.every((i) => hit.has(board[i]))) ln.forEach((i) => on.add(i));
   return on;
 }
-function drawBoard(el, board, called, opts) {
-  opts = opts || {};
-  el.innerHTML = '';
-  if (!board) return;
-  const hit = new Set(called || []);
-  const on = lineCells(board, called || []);
-  board.forEach((n, i) => {
+function boardView(el) {
+  const cells = [...Array(CELLS)].map((_, i) => {
     const d = document.createElement('div');
-    d.className = 'cell' + (hit.has(n) ? ' hit' : '') + (on.has(i) ? ' line' : '')
-      + (opts.last === n ? ' last' : '') + (opts.pick && !hit.has(n) ? ' pick' : '');
-    d.textContent = n;
-    if (opts.pick && !hit.has(n)) d.onclick = () => opts.pick(n);
+    d.className = 'cell';
+    d.onclick = () => { if (view.onPick && d.classList.contains('pick')) view.onPick(Number(d.textContent)); };
     el.appendChild(d);
+    return d;
   });
+  const view = {
+    onPick: null,
+    draw(board, called, opts) {
+      opts = opts || {};
+      const hit = new Set(called || []);
+      const on = board ? lineCells(board, called || []) : new Set();
+      cells.forEach((d, i) => {
+        const n = board ? board[i] : '';
+        if (d.textContent !== String(n)) d.textContent = n;
+        d.className = 'cell' + (hit.has(n) ? ' hit' : '') + (on.has(i) ? ' line' : '')
+          + (opts.last === n ? ' last' : '') + (opts.pickable && !hit.has(n) ? ' pick' : '');
+      });
+    },
+  };
+  return view;
 }
+const setupBoard = boardView($('board-wait'));
+const playBoard = boardView($('board-play'));
+playBoard.onPick = (n) => act(async () => { beep(true); adopt(await api('call', { n })); });
 
 /* -------------------------------------------------------------- 소리 한 톨 */
 let AC = null;
@@ -279,50 +301,75 @@ function beep(hi) {
   } catch (e) {}
 }
 
+/* -------------------------------------------------------------- 선 정하기 */
+const chooser = Picker.chooser($('pick-kind'));
+const ackKey = () => SAVE + ':pick:' + st.code + ':' + st.round;
+const acked = () => { try { return sessionStorage.getItem(ackKey()) === '1'; } catch (e) { return false; } };
+const picker = Picker.mount($('picker'), {
+  onThrow: (v) => act(async () => { beep(false); adopt(await api('throw', { value: v })); }),
+  onDone: () => { try { sessionStorage.setItem(ackKey(), '1'); } catch (e) {} render(); },
+});
+
 /* ------------------------------------------------------------------ 그리기 */
 function show(id) {
-  ['s-home', 's-wait', 's-play', 's-done'].forEach((s) => $(s).classList.toggle('hide', s !== id));
+  ['s-home', 's-wait', 's-pick', 's-setup', 's-play', 's-done'].forEach((s) => $(s).classList.toggle('hide', s !== id));
 }
+const meName = () => (st && st.name) || S.name || '나';
+const youName = () => (st && st.opponent.name) || '상대';
+const jo = Picker.jo;
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
 function render() {
   if (!st) { show('s-home'); $('sub').textContent = '각자 폰에서 방 코드로 만나요'; return; }
-  const meName = S.name || '나';
-  const youName = st.opponent.name || '상대';
 
   if (st.phase === 'wait') {
     show('s-wait');
     $('sub').textContent = '방 코드를 알려주고 같이 들어와요';
     $('w-code').textContent = st.code;
+    return;
+  }
+
+  // 선 정하기 — 정해진 뒤에도 '좋아요'를 누를 때까지 결과를 보여준다
+  // 정해진 결과는 첫 숫자를 부르기 전까지만 보여준다 (게임 중에 새로고침해도 안 뜨게)
+  if (st.phase === 'pick' || ((st.phase === 'setup' || (st.phase === 'play' && !st.called.length)) && !acked())) {
+    show('s-pick');
+    $('sub').textContent = '방 ' + st.code + ' · 누가 먼저 부를까요';
+    picker.update(st.pick, { you: S.you, meName: meName(), youName: youName(), round: st.round,
+      extra: (meFirst) => (meFirst ? '내가 먼저 숫자를 불러요' : jo(youName(), '이', '가') + ' 먼저 불러요') });
+    return;
+  }
+
+  if (st.phase === 'setup') {
+    show('s-setup');
+    $('sub').textContent = '방 ' + st.code + ' · 판을 깔아요';
+    $('s-first').textContent = st.first === S.you ? '🎉 내가 먼저 불러요' : jo(youName(), '이', '가') + ' 먼저 불러요';
     $('w-goal').textContent = st.winLines;
-    const o = st.opponent;
-    $('w-opp').innerHTML = !o.joined
-      ? '<span class="dots">상대를 기다리는 중</span>'
-      : (o.ready ? '✓ <b>' + youName + '</b> 준비 완료' : youName + ' 들어왔어요. 아직 준비 전');
     if (!localBoard) localBoard = shuffled();
-    const mine = st.board || localBoard;
-    drawBoard($('board-wait'), mine, []);
+    setupBoard.draw(st.board || localBoard, []);
     $('b-ready').disabled = !!st.ready;
     $('b-shuffle').disabled = !!st.ready;
     $('b-ready').textContent = st.ready ? '준비 완료 ✓' : '준비 완료';
+    $('w-opp').innerHTML = st.opponentReady ? '✓ ' + esc(youName()) + ' 준비 완료'
+      : '<span class="dots">' + esc(jo(youName(), '이', '가')) + ' 판을 까는 중</span>';
     return;
   }
 
   if (st.phase === 'play') {
     show('s-play');
     $('sub').textContent = '방 ' + st.code + ' · ' + st.winLines + '줄 먼저';
-    $('p-me-n').textContent = meName;
-    $('p-you-n').textContent = youName;
+    $('p-me-n').textContent = meName();
+    $('p-you-n').textContent = youName();
     $('p-me-v').innerHTML = st.lines[S.you] + '<small>줄</small>';
     $('p-you-v').innerHTML = st.lines[1 - S.you] + '<small>줄</small>';
     $('p-who').className = 'who turn' + (st.turn === S.you ? 0 : 1);
     const b = $('p-banner');
     b.className = 'banner ' + (st.yourTurn ? 'me' : 'you');
-    b.textContent = st.yourTurn ? '내 차례 — 숫자를 골라요' : youName + ' 차례를 기다려요';
+    b.textContent = st.yourTurn ? '내 차례 — 숫자를 골라요' : jo(youName(), '이', '가') + ' 고르는 중';
     $('p-last-n').textContent = st.last == null ? '아직 없어요' : st.last;
     $('p-last-n').className = 'n' + (st.last == null ? ' none' : '');
-    drawBoard($('board-play'), st.board, st.called, {
-      last: st.last,
-      pick: st.yourTurn ? (n) => act(async () => { beep(true); adopt(await api('call', { n })); }) : null,
-    });
+    playBoard.draw(st.board, st.called, { last: st.last, pickable: st.yourTurn });
     if (st.last != null && st.last !== lastSeenCall) {
       if (lastSeenCall !== null && !st.yourTurn) beep(false);
       lastSeenCall = st.last;
@@ -337,8 +384,7 @@ function render() {
     const kind = st.winner === 'draw' ? 'draw' : (st.winner === S.you ? 'win' : 'lose');
     $('d-box').className = 'result ' + kind;
     $('d-big').textContent = kind === 'win' ? '🎉 이겼어요!' : kind === 'lose' ? '졌어요…' : '무승부!';
-    $('d-sub').textContent = meName + ' ' + mine + '줄 · ' + youName + ' ' + theirs + '줄';
-    $('d-wait').textContent = '';
+    $('d-sub').textContent = meName() + ' ' + mine + '줄 · ' + youName() + ' ' + theirs + '줄';
     lastSeenCall = null;
     return;
   }
@@ -347,8 +393,7 @@ function render() {
 /* ------------------------------------------------------------------ 버튼 */
 $('b-create').onclick = () => act(async () => {
   S.name = $('name').value.trim();
-  localBoard = shuffled();
-  adopt(await api('create', { name: S.name }));
+  adopt(await api('create', { name: S.name, pick: chooser.get() }));
   poll();
 });
 $('b-join').onclick = () => act(async () => {
@@ -356,18 +401,12 @@ $('b-join').onclick = () => act(async () => {
   if (!/^\d{4}$/.test(c)) throw new Error('네 자리 숫자를 넣어주세요');
   S.name = $('name').value.trim();
   S.code = c;
-  localBoard = shuffled();
   adopt(await api('join', { code: c, name: S.name }));
   poll();
 });
 $('b-shuffle').onclick = () => { localBoard = shuffled(); render(); };
-$('b-ready').onclick = () => act(async () => {
-  adopt(await api('ready', { board: st.board || localBoard }));
-});
-$('b-again').onclick = () => act(async () => {
-  localBoard = shuffled();
-  adopt(await api('restart'));
-});
+$('b-ready').onclick = () => act(async () => adopt(await api('ready', { board: st.board || localBoard })));
+$('b-again').onclick = () => act(async () => adopt(await api('restart', { round: st.round })));
 $('b-share').onclick = async () => {
   const url = location.origin + location.pathname + '?code=' + st.code;
   const text = '커플 빙고 하자! 방 코드 ' + st.code + '\n' + url;
@@ -381,7 +420,6 @@ $('b-share').onclick = async () => {
 ['name', 'code'].forEach((id) => $(id).addEventListener('keydown', (e) => {
   if (e.key === 'Enter') $(id === 'code' ? 'b-join' : 'b-create').click();
 }));
-document.addEventListener('pointerdown', () => beep.unlock || (beep.unlock = 1, beep(false)), { once: true });
 
 /* ------------------------------------------------------------------ 시작 */
 (async function boot() {

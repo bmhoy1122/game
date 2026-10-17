@@ -1,5 +1,6 @@
 /* 커플 게임 공용 방 — 만들기 · 들어가기 · 누구인지 확인 · 다시 하기 · 만료.
- * 게임마다 다른 건 game 객체로 받는다: { setup, actions, view, finished }.
+ * 게임마다 다른 건 game 객체로 받는다: { setup, actions, view, finished, options? }.
+ * options(body) 는 방을 만들 때 한 번만 불린다 — 만든 사람이 고른 설정(예: 선 정하기 방식).
  *
  * 저장 구조 — Netlify Blobs 에 트랜잭션이 없어서 이렇게 나눴다.
  *   room:<code>      공용 문서. 만들기 · 들어가기 · 차례제 행동 · 다시 하기만 쓴다
@@ -82,6 +83,7 @@ export async function handleRoom(game, body, store, now = Date.now()) {
     if (!code) return bad('방을 만들지 못했어요. 잠시 뒤 다시 해주세요', 503);
     const token = crypto.randomUUID();
     const room = { code, created: now, round: 1, players: [{ token, name: cleanName(body.name) }, null] };
+    room.opts = game.options ? game.options(body || {}) : {};
     game.setup(room);
     await store.set(roomKey(code), room);
     return ok(await load(room, 0), { token });

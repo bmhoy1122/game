@@ -90,6 +90,7 @@
   .muted{color:#6f74a8;font-size:12.5px;font-weight:700;text-align:center;margin:0}
   .dots::after{content:'';animation:d 1.2s steps(4,end) infinite}
   @keyframes d{0%{content:''}25%{content:'.'}50%{content:'..'}75%{content:'...'}}
+  body{--pk-accent:#4b5fd6;--pk-soft:#f2f4fd;--pk-ink:#3d4380;--pk-mute:#6f74a8;--pk-line:#c9cfee}
   a.back{display:block;text-align:center;color:#ffffffc8;font-size:12px;font-weight:700;text-decoration:none;padding:4px}
 </style>
 </head>
@@ -103,7 +104,9 @@
   <section id="s-home" class="card hide">
     <h2>방 만들기</h2>
     <input id="name" maxlength="8" placeholder="내 이름 (선택)" autocomplete="off">
-    <div style="height:10px"></div>
+    <h2 style="margin:16px 0 8px">누가 먼저 할지</h2>
+    <div id="pick-kind"></div>
+    <div style="height:12px"></div>
     <button class="primary" id="b-create">새 방 만들기</button>
     <h2 style="margin-top:22px">코드로 들어가기</h2>
     <input id="code" inputmode="numeric" maxlength="4" placeholder="0000" autocomplete="off">
@@ -123,7 +126,10 @@
     <p class="muted" style="margin-top:14px"><span class="dots">상대를 기다리는 중</span></p>
   </section>
 
-  <!-- 3·4. 숫자 정하기 + 맞히기 (같은 키패드를 쓴다) -->
+  <!-- 3. 선 정하기 -->
+  <section id="s-pick" class="card hide"><div id="picker"></div></section>
+
+  <!-- 4·5. 숫자 정하기 + 맞히기 (같은 키패드를 쓴다) -->
   <section id="s-game" class="hide" style="display:flex;flex-direction:column;gap:12px">
     <div class="card" id="g-top">
       <div class="banner you" id="g-banner">—</div>
@@ -168,9 +174,11 @@
 
   <a class="back" href="../">← 다른 게임</a>
 </div>
+<script src="../couple-common/picker.js"></script>
 <script>
 /* =========================================================================
    숫자야구 — 각자 1~9 서로 다른 숫자 세 개를 숨기고 번갈아 맞힌다.
+   흐름: 대기 → 선 정하기(미니게임) → 숫자 정하기 → 번갈아 맞히기 → 끝
    상태는 서버(POST /api/baseball)가 들고 있고, 여기는 그리기만 한다.
    규칙은 netlify/lib/baseball-core.mjs 가 정답이다.
    상대 숫자는 끝나기 전엔 서버가 아예 안 보내준다.
@@ -328,15 +336,20 @@ $('b-go').onclick = () => act(async () => {
 
 /* ------------------------------------------------------------------ 그리기 */
 function show(id) {
-  ['s-home', 's-wait', 's-game', 's-done'].forEach((s) => $(s).classList.toggle('hide', s !== id));
+  ['s-home', 's-wait', 's-pick', 's-game', 's-done'].forEach((s) => $(s).classList.toggle('hide', s !== id));
 }
 const meName = () => (st && st.name) || S.name || '나';
 const youName = () => (st && st.opponent.name) || '상대';
-function jo(w, a, b) {
-  const c = String(w).charCodeAt(String(w).length - 1);
-  if (!(c >= 0xac00 && c <= 0xd7a3)) return w + a + '(' + b + ')';
-  return w + ((c - 0xac00) % 28 ? a : b);
-}
+const jo = Picker.jo;
+
+/* 선 정하기 — 정해진 뒤에도 '좋아요'를 누를 때까지 결과를 보여준다 */
+const chooser = Picker.chooser($('pick-kind'));
+const ackKey = () => SAVE + ':pick:' + st.code + ':' + st.round;
+const acked = () => { try { return sessionStorage.getItem(ackKey()) === '1'; } catch (e) { return false; } };
+const picker = Picker.mount($('picker'), {
+  onThrow: (v) => act(async () => { beep(false); adopt(await api('throw', { value: v })); }),
+  onDone: () => { try { sessionStorage.setItem(ackKey(), '1'); } catch (e) {} render(); },
+});
 function esc(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
@@ -354,6 +367,15 @@ function render() {
     show('s-wait');
     $('sub').textContent = '방 코드를 알려주고 같이 들어와요';
     $('w-code').textContent = st.code;
+    return;
+  }
+
+  // 정해진 결과는 첫 공을 던지기 전까지만 보여준다
+  if (st.phase === 'pick' || ((st.phase === 'setup' || (st.phase === 'play' && !st.log.length)) && !acked())) {
+    show('s-pick');
+    $('sub').textContent = '방 ' + st.code + ' · 누가 먼저 맞힐까요';
+    picker.update(st.pick, { you: S.you, meName: meName(), youName: youName(), round: st.round,
+      extra: (meFirst) => (meFirst ? '내가 먼저 맞혀요' : jo(youName(), '이', '가') + ' 먼저 맞혀요') });
     return;
   }
 
@@ -433,7 +455,7 @@ $('tab-me').onclick = () => { tab = 'me'; render(); };
 $('tab-you').onclick = () => { tab = 'you'; render(); };
 $('b-create').onclick = () => act(async () => {
   S.name = $('name').value.trim();
-  adopt(await api('create', { name: S.name }));
+  adopt(await api('create', { name: S.name, pick: chooser.get() }));
   poll();
 });
 $('b-join').onclick = () => act(async () => {
