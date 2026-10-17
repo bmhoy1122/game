@@ -7,8 +7,8 @@
  * · 판(board)은 서버가 들고 있다. 그래야 서버가 줄 수를 직접 세서 승패를 판정한다.
  *   상대 판은 응답에서 빼고 보낸다 — 줄 수만 알려준다(실제 빙고에서 "두 줄!" 외치는 것과 같다).
  * · 여기엔 import 가 없다. 저장소는 handle() 의 인자로 받는다. 그래서 npm install 없이
- *   tools/bingo-smoke.js 와 tools/bingo-dev.js 가 메모리 저장소를 끼워 그대로 돌릴 수 있다.
- *   @netlify/blobs 를 붙이는 건 옆 파일 bingo.mjs 하나뿐이다.
+ *   tools/bingo-smoke.js 와 tools/couple-dev.js 가 메모리 저장소를 끼워 그대로 돌릴 수 있다.
+ *   @netlify/blobs 를 붙이는 건 netlify/lib/blob-handler.mjs 하나뿐이다.
  */
 
 export const SIZE = 5;

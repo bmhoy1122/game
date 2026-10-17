@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#2e1430">
+<title>이심전심</title>
+<style>
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;min-height:100%;font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+    color:#4a2b3f;background:#3a1b3c}
+  body{background:radial-gradient(130% 80% at 50% 0%,#ffe1c4 0%,#ffa8b8 38%,#b3688f 72%,#53284f 100%);
+    background-attachment:fixed;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+    display:flex;justify-content:center}
+  #app{width:100%;max-width:440px;padding:18px 16px 28px;display:flex;flex-direction:column;gap:14px}
+
+  h1{margin:4px 0 0;font-size:27px;letter-spacing:-.5px;color:#fff;text-align:center;
+    text-shadow:0 2px 10px rgba(80,30,60,.35)}
+  .sub{margin:0;text-align:center;color:#ffffffcc;font-size:13px;font-weight:600}
+
+  .card{background:rgba(255,255,255,.93);border-radius:20px;padding:18px 16px;
+    box-shadow:0 10px 30px rgba(70,25,55,.22)}
+  .card h2{margin:0 0 12px;font-size:16px;color:#8a3f63}
+
+  button{font:inherit;font-weight:800;border:0;border-radius:14px;padding:14px 16px;cursor:pointer;
+    touch-action:manipulation;transition:transform .06s,filter .15s}
+  button:active:not(:disabled){transform:scale(.97)}
+  button:disabled{opacity:.45;cursor:default}
+  .primary{background:linear-gradient(135deg,#ff7a9c,#e8577e);color:#fff;width:100%;font-size:17px;
+    box-shadow:0 6px 16px rgba(232,87,126,.35)}
+  .ghost{background:#f6e6ee;color:#8a3f63;width:100%}
+
+  input{font:inherit;width:100%;padding:14px;border-radius:14px;border:2px solid #f0d8e4;
+    background:#fff;color:#4a2b3f;font-weight:700;text-align:center}
+  input:focus{outline:0;border-color:#e8577e}
+  #code{letter-spacing:10px;font-size:26px;font-weight:900;padding-left:10px}
+
+  .codebox{text-align:center;background:linear-gradient(135deg,#fff0f5,#ffe3ec);border-radius:16px;padding:14px}
+  .codebox .n{font-size:40px;font-weight:900;letter-spacing:8px;color:#d4446e;padding-left:8px}
+  .codebox .t{font-size:12px;font-weight:700;color:#a36084}
+
+  .prog{display:flex;align-items:center;gap:10px;font-weight:800;color:#8a3f63;font-size:14px}
+  .bar{flex:1;height:8px;border-radius:8px;background:#f3e0ea;overflow:hidden}
+  .bar i{display:block;height:100%;background:linear-gradient(90deg,#ff9fb8,#e8577e);transition:width .3s}
+  .match{font-size:13px;color:#d4446e}
+
+  .q{text-align:center;font-size:13px;font-weight:800;color:#b07a98;letter-spacing:1px;margin:2px 0 12px}
+  .opt{position:relative;width:100%;min-height:78px;font-size:21px;background:#fdf3f7;color:#7a3f60;
+    border:3px solid #f3e0ea;line-height:1.25;padding:16px 12px}
+  .opt.me{background:linear-gradient(135deg,#ff8fae,#e8577e);color:#fff;border-color:#e8577e}
+  .opt.them{border-color:#f6a93b;box-shadow:0 0 0 3px #ffe2a8 inset}
+  .opt.me.them{box-shadow:0 0 0 4px #ffd27a}
+  .opt:disabled{opacity:1}          /* 공개 뒤 잠근 버튼이 흐려지면 고른 답이 안 보인다 */
+  .opt.dim,.opt.dim:disabled{opacity:.45}
+  .vs{text-align:center;font-weight:900;color:#d9a3bd;font-size:13px;margin:8px 0}
+  .tags{position:absolute;top:-11px;right:10px;display:flex;gap:4px}
+  .tags span{font-size:11px;font-weight:800;border-radius:10px;padding:3px 8px;background:#fff;
+    color:#d4446e;box-shadow:0 2px 6px rgba(0,0,0,.12)}
+  .tags span.t{color:#a86a10}
+
+  .status{text-align:center;font-weight:800;font-size:15px;border-radius:14px;padding:12px;margin-top:14px}
+  .status.wait{background:#efe3ea;color:#8a6a7c}
+  .status.yes{background:linear-gradient(135deg,#ffe0ea,#ffc4d6);color:#c23a63}
+  .status.no{background:#f3ecf6;color:#7b5a86}
+
+  .big{text-align:center}
+  .big .p{font-size:58px;font-weight:900;color:#d4446e;line-height:1}
+  .big .m{font-size:17px;font-weight:800;color:#8a3f63;margin-top:8px}
+  .hist{list-style:none;margin:14px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
+  .hist li{display:flex;align-items:center;gap:8px;background:#fbf2f6;border-radius:12px;padding:9px 10px;font-size:13px}
+  .hist .ok{font-size:15px;width:20px;text-align:center}
+  .hist .qq{flex:1;font-weight:700;color:#7a3f60}
+  .hist .qq b{color:#d4446e}
+  .hist .qq s{text-decoration:none;color:#a07b92}
+
+  #err{background:#5b2340;color:#ffd9e4;border-radius:14px;padding:11px 14px;font-size:13px;
+    font-weight:700;text-align:center}
+  .hide{display:none!important}
+  .muted{color:#a36084;font-size:12.5px;font-weight:700;text-align:center;margin:0}
+  .dots::after{content:'';animation:d 1.2s steps(4,end) infinite}
+  @keyframes d{0%{content:''}25%{content:'.'}50%{content:'..'}75%{content:'...'}}
+  a.back{display:block;text-align:center;color:#ffffffc0;font-size:12px;font-weight:700;text-decoration:none;padding:4px}
+</style>
+</head>
+<body>
+<div id="app">
+  <h1>이심전심</h1>
+  <p class="sub" id="sub">둘이 동시에 고르고, 같이 공개해요</p>
+  <div id="err" class="hide"></div>
+
+  <!-- 1. 시작 -->
+  <section id="s-home" class="card hide">
+    <h2>방 만들기</h2>
+    <input id="name" maxlength="8" placeholder="내 이름 (선택)" autocomplete="off">
+    <div style="height:10px"></div>
+    <button class="primary" id="b-create">새 방 만들기</button>
+    <h2 style="margin-top:22px">코드로 들어가기</h2>
+    <input id="code" inputmode="numeric" maxlength="4" placeholder="0000" autocomplete="off">
+    <div style="height:10px"></div>
+    <button class="ghost" id="b-join">들어가기</button>
+    <p class="muted" style="margin-top:14px">한 판에 10문제. 둘 다 고르면 그때 공개돼요.</p>
+  </section>
+
+  <!-- 2. 대기 -->
+  <section id="s-wait" class="card hide">
+    <div class="codebox">
+      <div class="t">방 코드</div>
+      <div class="n" id="w-code">----</div>
+    </div>
+    <div style="height:10px"></div>
+    <button class="ghost" id="b-share">초대 링크 복사</button>
+    <p class="muted" style="margin-top:14px"><span class="dots">상대를 기다리는 중</span></p>
+    <p class="muted" style="margin-top:6px">들어오면 바로 첫 질문이 나와요</p>
+  </section>
+
+  <!-- 3. 고르기 -->
+  <section id="s-play" class="hide" style="display:flex;flex-direction:column;gap:12px">
+    <div class="card" style="padding:14px 16px">
+      <div class="prog"><span id="p-n">1 / 10</span><div class="bar"><i id="p-bar" style="width:0"></i></div>
+        <span class="match" id="p-match">💞 0</span></div>
+    </div>
+    <div class="card">
+      <div class="q">둘 중 하나!</div>
+      <button class="opt" id="o0"><span class="tags" id="t0"></span><span id="l0">—</span></button>
+      <div class="vs">VS</div>
+      <button class="opt" id="o1"><span class="tags" id="t1"></span><span id="l1">—</span></button>
+      <div class="status wait" id="p-status">골라주세요</div>
+      <div style="height:12px" id="p-gap" class="hide"></div>
+      <button class="primary hide" id="b-next">다음 질문</button>
+    </div>
+  </section>
+
+  <!-- 4. 결과 -->
+  <section id="s-done" class="card hide">
+    <div class="big">
+      <div class="p" id="d-p">0%</div>
+      <div class="m" id="d-m">—</div>
+      <p class="muted" id="d-sub" style="margin-top:6px"></p>
+    </div>
+    <ul class="hist" id="d-hist"></ul>
+    <div style="height:14px"></div>
+    <button class="primary" id="b-again">새 질문으로 다시 하기</button>
+  </section>
+
+  <a class="back" href="../">← 다른 게임</a>
+</div>
+<script>
+/* =========================================================================
+   이심전심 — 둘이 동시에 고르고, 둘 다 고르면 같이 공개한다.
+   상태는 서버(POST /api/balance)가 들고 있고, 여기는 그리기만 한다.
+   규칙은 netlify/lib/balance-core.mjs 가 정답이다.
+   상대 답은 둘 다 고르기 전엔 서버가 아예 안 보내준다.
+   ========================================================================= */
+const API = '/api/balance', SAVE = 'couple-balance', POLL_MS = 1400, POLL_SLOW_MS = 3200;
+const $ = (id) => document.getElementById(id);
+
+let S = { code: null, token: null, you: null, name: '' };
+let st = null;
+let timer = null, busy = false;
+
+/* ------------------------------------------------------------------ 통신 */
+async function api(action, extra) {
+  const body = { action, code: S.code, token: S.token, ...(extra || {}) };
+  let res;
+  try {
+    res = await fetch(API, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  } catch (e) { throw new Error('인터넷이 끊긴 것 같아요'); }
+  let data = {};
+  try { data = await res.json(); } catch (e) {}
+  if (!res.ok) {
+    if (res.status === 404 && !data.error) throw new Error('서버를 찾지 못했어요. 넷리파이에 올린 주소로 열어주세요');
+    throw new Error(data.error || '요청이 실패했어요 (' + res.status + ')');
+  }
+  return data;
+}
+function adopt(data) {
+  if (data.token) S.token = data.token;
+  if (data.code) S.code = data.code;
+  if (typeof data.you === 'number') S.you = data.you;
+  st = data;
+  save();
+  render();
+}
+function save() {
+  try { localStorage.setItem(SAVE, JSON.stringify({ code: S.code, token: S.token, name: S.name })); } catch (e) {}
+}
+function forget() {
+  try { localStorage.removeItem(SAVE); } catch (e) {}
+  S = { code: null, token: null, you: null, name: S.name };
+  st = null;
+}
+function err(msg) {
+  const e = $('err');
+  if (!msg) { e.classList.add('hide'); return; }
+  e.textContent = msg; e.classList.remove('hide');
+  clearTimeout(err.t); err.t = setTimeout(() => e.classList.add('hide'), 4200);
+}
+async function act(fn) {
+  if (busy) return;
+  busy = true;
+  try { await fn(); err(null); } catch (e) { err(e.message); } finally { busy = false; }
+}
+
+/* ------------------------------------------------------------------ 폴링 */
+function poll() {
+  clearTimeout(timer);
+  const gap = st && st.phase === 'done' ? POLL_SLOW_MS : POLL_MS;
+  timer = setTimeout(async () => {
+    if (S.code && S.token && document.visibilityState === 'visible' && !busy) {
+      try { adopt(await api('state')); } catch (e) {}
+    }
+    poll();
+  }, gap);
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && S.code) act(async () => adopt(await api('state')));
+});
+
+/* -------------------------------------------------------------- 소리 한 톨 */
+let AC = null;
+function beep(hi) {
+  try {
+    if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)();
+    if (AC.state === 'suspended') AC.resume();
+    const o = AC.createOscillator(), g = AC.createGain(), t = AC.currentTime;
+    o.type = 'sine';
+    o.frequency.setValueAtTime(hi ? 880 : 520, t);
+    o.frequency.exponentialRampToValueAtTime(hi ? 1320 : 680, t + 0.12);
+    g.gain.setValueAtTime(0.06, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
+    o.connect(g); g.connect(AC.destination); o.start(t); o.stop(t + 0.18);
+  } catch (e) {}
+}
+
+/* ------------------------------------------------------------------ 그리기 */
+function show(id) {
+  ['s-home', 's-wait', 's-play', 's-done'].forEach((s) => $(s).classList.toggle('hide', s !== id));
+}
+const meName = () => (st && st.name) || S.name || '나';
+const youName = () => (st && st.opponent.name) || '상대';
+let lastRevealKey = null;
+
+function render() {
+  if (!st) { show('s-home'); $('sub').textContent = '둘이 동시에 고르고, 같이 공개해요'; return; }
+
+  if (st.phase === 'wait') {
+    show('s-wait');
+    $('sub').textContent = '방 코드를 알려주고 같이 들어와요';
+    $('w-code').textContent = st.code;
+    return;
+  }
+
+  if (st.phase === 'play') {
+    show('s-play');
+    $('sub').textContent = '방 ' + st.code + ' · ' + meName() + ' ♥ ' + youName();
+    $('p-n').textContent = (st.qi + 1) + ' / ' + st.total;
+    $('p-bar').style.width = (st.qi / st.total * 100) + '%';
+    $('p-match').textContent = '💞 ' + st.matches;
+
+    const rv = st.reveal;
+    for (const i of [0, 1]) {
+      const b = $('o' + i);
+      $('l' + i).textContent = st.q[i];
+      const mine = (rv ? rv.mine : st.mine) === i;
+      const theirs = rv && rv.theirs === i;
+      b.className = 'opt' + (mine ? ' me' : '') + (theirs ? ' them' : '') + (rv && !mine && !theirs ? ' dim' : '');
+      b.disabled = !!rv;
+      $('t' + i).innerHTML = rv
+        ? (mine ? '<span>' + esc(meName()) + '</span>' : '') + (theirs ? '<span class="t">' + esc(youName()) + '</span>' : '')
+        : '';
+    }
+
+    const s = $('p-status');
+    if (rv) {
+      s.className = 'status ' + (rv.match ? 'yes' : 'no');
+      s.textContent = rv.match ? '💞 통했다!' : '다르게 골랐어요 — 왜 그거 골랐어?';
+      const key = st.round + ':' + st.qi;
+      if (lastRevealKey !== key) { lastRevealKey = key; beep(rv.match); }
+    } else if (st.mine === null) {
+      s.className = 'status wait';
+      s.textContent = st.theirsPicked ? jo(youName(), '은', '는') + ' 벌써 골랐어요 👀' : '골라주세요';
+    } else {
+      s.className = 'status wait';
+      s.innerHTML = '<span class="dots">' + esc(jo(youName(), '이', '가')) + ' 고르는 중</span>';
+    }
+    $('b-next').classList.toggle('hide', !rv);
+    $('p-gap').classList.toggle('hide', !rv);
+    $('b-next').textContent = st.qi + 1 >= st.total ? '결과 보기' : '다음 질문';
+    return;
+  }
+
+  if (st.phase === 'done') {
+    show('s-done');
+    $('sub').textContent = '방 ' + st.code;
+    const pct = Math.round(st.matches / st.total * 100);
+    $('d-p').textContent = pct + '%';
+    $('d-m').textContent = pct === 100 ? '완벽한 이심전심 💞' : pct >= 80 ? '거의 한 몸이네요' :
+      pct >= 50 ? '닮은 듯 다른 우리' : pct >= 30 ? '서로 다른 매력이 끌리는 사이' : '정반대라 재밌는 사이';
+    $('d-sub').textContent = st.total + '문제 중 ' + st.matches + '개가 같았어요';
+    $('d-hist').innerHTML = st.history.map((h) => {
+      const a = h.q[h.mine], b = h.q[h.theirs];
+      return '<li><span class="ok">' + (h.match ? '💞' : '·') + '</span><span class="qq">' +
+        esc(h.q[0]) + ' vs ' + esc(h.q[1]) + '<br>' +
+        (h.match ? '<b>둘 다 ' + esc(a) + '</b>' : '<s>' + esc(meName()) + ' ' + esc(a) + ' · ' + esc(youName()) + ' ' + esc(b) + '</s>') +
+        '</span></li>';
+    }).join('');
+    return;
+  }
+}
+/* 이름 뒤 조사 — 마지막 글자에 받침이 있으면 a, 없으면 b. 한글이 아니면 둘 다 적는다 */
+function jo(w, a, b) {
+  const c = String(w).charCodeAt(String(w).length - 1);
+  if (!(c >= 0xac00 && c <= 0xd7a3)) return w + a + '(' + b + ')';
+  return w + ((c - 0xac00) % 28 ? a : b);
+}
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+/* ------------------------------------------------------------------ 버튼 */
+[0, 1].forEach((i) => {
+  $('o' + i).onclick = () => act(async () => {
+    if (!st || st.phase !== 'play' || st.reveal || st.mine === i) return;
+    beep(false);
+    adopt(await api('pick', { qi: st.qi, choice: i }));
+  });
+});
+$('b-next').onclick = () => act(async () => adopt(await api('next', { qi: st.qi })));
+$('b-create').onclick = () => act(async () => {
+  S.name = $('name').value.trim();
+  adopt(await api('create', { name: S.name }));
+  poll();
+});
+$('b-join').onclick = () => act(async () => {
+  const c = $('code').value.trim();
+  if (!/^\d{4}$/.test(c)) throw new Error('네 자리 숫자를 넣어주세요');
+  S.name = $('name').value.trim();
+  S.code = c;
+  adopt(await api('join', { code: c, name: S.name }));
+  poll();
+});
+$('b-again').onclick = () => act(async () => adopt(await api('restart', { round: st.round })));
+$('b-share').onclick = async () => {
+  const url = location.origin + location.pathname + '?code=' + st.code;
+  const text = '이심전심 하자! 방 코드 ' + st.code + '\n' + url;
+  try {
+    if (navigator.share) { await navigator.share({ title: '이심전심', text: '방 코드 ' + st.code, url }); return; }
+    await navigator.clipboard.writeText(text);
+    $('b-share').textContent = '복사했어요 ✓';
+    setTimeout(() => ($('b-share').textContent = '초대 링크 복사'), 1800);
+  } catch (e) { err('복사가 안 돼요. 방 코드 ' + st.code + ' 를 알려주세요'); }
+};
+['name', 'code'].forEach((id) => $(id).addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') $(id === 'code' ? 'b-join' : 'b-create').click();
+}));
+
+/* ------------------------------------------------------------------ 시작 */
+(async function boot() {
+  show('s-home');
+  const urlCode = new URLSearchParams(location.search).get('code');
+  let saved = null;
+  try { saved = JSON.parse(localStorage.getItem(SAVE) || 'null'); } catch (e) {}
+  if (saved && saved.name) { S.name = saved.name; $('name').value = saved.name; }
+
+  // 새로고침했으면 있던 방으로 돌아간다
+  if (saved && saved.code && saved.token && (!urlCode || urlCode === saved.code)) {
+    S.code = saved.code; S.token = saved.token;
+    try { adopt(await api('state')); poll(); return; } catch (e) { forget(); }
+  }
+  if (urlCode && /^\d{4}$/.test(urlCode)) {
+    $('code').value = urlCode;
+    $('sub').textContent = '초대받은 방 ' + urlCode + ' · 이름을 넣고 들어가요';
+  }
+  render();
+})();
+</script>
+</body>
+</html>
