@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /* 커플 빙고 규칙을 브라우저도 서버도 없이 돌려본다.
  *   node tools/bingo-smoke.js
- * netlify/functions/bingo-core.mjs 를 그대로 불러서 메모리 저장소를 끼운다.
+ * netlify/lib/bingo-core.mjs 를 그대로 불러서 메모리 저장소를 끼운다.
  */
 const path = require('path');
 
@@ -21,7 +21,7 @@ function memStore() {
 }
 
 (async () => {
-  const core = await import(path.join(__dirname, '..', 'netlify/functions/bingo-core.mjs'));
+  const core = await import(path.join(__dirname, '..', 'netlify/lib/bingo-core.mjs'));
   const { handle, lineCount, validBoard, WIN_LINES, CELLS, LINES } = core;
   const store = memStore();
   const call = (body, now) => handle(body, store, now);
