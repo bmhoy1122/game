@@ -17,7 +17,7 @@ function memStore() {
 
 (async () => {
   const G = await import(path.join(__dirname, '..', 'netlify/lib/gomoku-core.mjs'));
-  const { N, isDoubleThree, fiveAt, makeBoard } = G;
+  const { N, isDoubleThree, fiveAt, makeBoard, forbiddenWhy, PRESETS, normRules } = G;
   const B = (black, white = []) => {
     const b = new Array(N * N).fill(0);
     black.forEach(([r, c]) => (b[r * N + c] = 1));
@@ -35,6 +35,28 @@ function memStore() {
     check('넷 + 삼(사삼)은 둘 수 있다', !isDoubleThree(B([[7, 4], [7, 5], [7, 6], [5, 7], [6, 7]]), 7, 7));
     check('다섯이 되면 쌍삼이어도 둘 수 있다', !isDoubleThree(B([[7, 3], [7, 4], [7, 5], [7, 6], [5, 7], [6, 7]]), 7, 7));
     check('삼 하나는 둘 수 있다', !isDoubleThree(B([[7, 5], [7, 6]]), 7, 7));
+
+    // 사사 · 장목 · 백 금수
+    const RJ = PRESETS.renju.black, SAY = PRESETS.say;
+    check('넷 두 개(가로 + 세로)는 사사', forbiddenWhy(B([[7, 4], [7, 5], [7, 6], [4, 7], [5, 7], [6, 7]]), 7, 7, 1, RJ) === 'four');
+    check('한 줄 안의 X.XXX.X 도 사사', forbiddenWhy(B([[7, 3], [7, 5], [7, 7], [7, 9]]), 7, 6, 1, RJ) === 'four');
+    check('열린 넷 하나(.XXXX.)는 사사가 아니다', forbiddenWhy(B([[7, 4], [7, 5], [7, 6]]), 7, 7, 1, RJ) === null);
+    check('사사를 안 막으면 둘 수 있다', forbiddenWhy(B([[7, 4], [7, 5], [7, 6], [4, 7], [5, 7], [6, 7]]), 7, 7, 1, SAY.black) === null);
+    check('장목을 막으면 여섯 자리는 못 둔다', forbiddenWhy(B([[7, 3], [7, 4], [7, 5], [7, 6]]), 7, 7, 1, RJ) === null &&
+      forbiddenWhy(B([[7, 2], [7, 3], [7, 4], [7, 6], [7, 7]]), 7, 5, 1, RJ) === 'long');
+    check('장목을 안 막으면 여섯도 둔다', forbiddenWhy(B([[7, 2], [7, 3], [7, 4], [7, 6], [7, 7]]), 7, 5, 1, PRESETS.free.black) === null);
+    check('딱 다섯이 되면 사사여도 둔다', forbiddenWhy(B([[7, 3], [7, 4], [7, 5], [7, 6], [4, 7], [5, 7], [6, 7]]), 7, 7, 1, RJ) === null);
+    check('세이클럽식은 백도 삼삼 금지', forbiddenWhy(B([], [[7, 5], [7, 6], [5, 7], [6, 7]]), 7, 7, 2, SAY.white) === 'three');
+    check('렌주는 백 금수가 없다', forbiddenWhy(B([], [[7, 5], [7, 6], [5, 7], [6, 7]]), 7, 7, 2, PRESETS.renju.white) === null);
+    const xx = B([[7, 2], [7, 4], [7, 5], [5, 6], [6, 6]]);    // X.XX(p) — 넷을 만들면 한쪽이 여섯이 된다
+    check('장목을 막은 쪽은 여섯으로만 열리는 셋을 삼으로 안 친다', forbiddenWhy(xx, 7, 6, 1, RJ) === null);
+    check('장목을 안 막으면 같은 모양이 쌍삼', forbiddenWhy(xx, 7, 6, 1, { three: true }) === 'three');
+    const nr = normRules({ black: { three: 1, four: 'x' }, white: null, junk: true });
+    check('받은 규칙은 true/false 여섯 개로 다시 만든다', JSON.stringify(nr) ===
+      JSON.stringify({ black: { three: true, four: true, long: false }, white: { three: false, four: false, long: false } }));
+    check('규칙을 안 보내면 세이클럽식', JSON.stringify(normRules()) === JSON.stringify(SAY));
+    const six = B([[7, 2], [7, 3], [7, 4], [7, 5], [7, 6], [7, 7]]);
+    check('딱 다섯만 치면 여섯은 이긴 게 아니다', !fiveAt(six, 7, 7, true) && !!fiveAt(six, 7, 7, false));
 
     // 다섯
     const five = makeBoard([[7, 3], [0, 0], [7, 4], [0, 1], [7, 5], [0, 2], [7, 6], [0, 3], [7, 7]]);
@@ -84,7 +106,7 @@ function memStore() {
     // 백이 같은 모양을 만들면 백은 괜찮다
     const s3 = memStore();
     const c3 = (bb) => G.handle(bb, s3);
-    const u = (await c3({ action: 'create', pick: 'coin' })).body;
+    const u = (await c3({ action: 'create', pick: 'coin', rules: PRESETS.renju })).body;
     const v = (await c3({ action: 'join', code: u.code })).body;
     const t3 = [u.token, v.token], f3 = v.first, w3 = 1 - f3;
     const p3 = (i, rr, cc) => c3({ action: 'place', code: u.code, token: t3[i], r: rr, c: cc });
@@ -93,7 +115,33 @@ function memStore() {
       await p3(w3, ...wm); await p3(f3, ...bm);
     }
     const ok3 = await p3(w3, 7, 7);
-    check('백은 쌍삼을 둬도 된다', ok3.status === 200);
+    check('렌주면 백은 쌍삼을 둬도 된다', ok3.status === 200);
+    check('방 규칙이 응답에 실린다', ok3.body.rules.black.four === true && ok3.body.rules.white.three === false);
+
+    // 세이클럽식(기본) — 백도 쌍삼을 못 두고, 백 차례에 × 가 간다
+    const s6 = memStore();
+    const c6 = (bb) => G.handle(bb, s6);
+    const u6 = (await c6({ action: 'create', pick: 'coin' })).body;
+    const v6 = (await c6({ action: 'join', code: u6.code })).body;
+    const t6 = [u6.token, v6.token], f6 = v6.first, w6 = 1 - f6;
+    const p6 = (i, rr, cc) => c6({ action: 'place', code: u6.code, token: t6[i], r: rr, c: cc });
+    await p6(f6, 0, 0);
+    for (const [wm, bm] of [[[7, 5], [0, 2]], [[7, 6], [0, 4]], [[5, 7], [0, 6]], [[6, 7], [14, 14]]]) {
+      await p6(w6, ...wm); await p6(f6, ...bm);
+    }
+    const wv = (await c6({ action: 'state', code: u6.code, token: t6[w6] })).body;
+    check('세이클럽식이면 백 차례에도 금수를 알려준다', wv.forbidden.some(([rr, cc, why]) => rr === 7 && cc === 7 && why === 'three'));
+    const no6 = await p6(w6, 7, 7);
+    check('세이클럽식이면 백도 쌍삼을 못 둔다', no6.status === 409, no6.body.error);
+
+    // 금수 고르기 전에 만든 방(rules 없음)은 예전대로 흑만 삼삼
+    const s7 = memStore();
+    const c7 = (bb) => G.handle(bb, s7);
+    const u7 = (await c7({ action: 'create', pick: 'coin' })).body;
+    const raw = await s7.get('room:' + u7.code);
+    delete raw.opts.rules; await s7.set('room:' + u7.code, raw);
+    const v7 = (await c7({ action: 'join', code: u7.code })).body;
+    check('예전 방은 흑만 삼삼', v7.rules.black.three && !v7.rules.white.three && !v7.rules.black.long);
 
     // 다섯으로 끝
     const s4 = memStore();

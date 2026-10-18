@@ -58,6 +58,32 @@
   .banner.you{background:#f1e8de;color:#8a6c55}
   .rule{font-size:11.5px;font-weight:700;color:#a08066;text-align:center;margin-top:8px}
 
+  /* 금수 고르기 (시작 화면) */
+  .presets{display:flex;gap:6px}
+  .presets button{flex:1;padding:10px 4px;font-size:13.5px;background:#f5e8da;color:#7a4a2a;border-radius:12px}
+  .presets button.on{background:linear-gradient(135deg,#d97a4a,#b8562f);color:#fff}
+  table.rules{width:100%;border-collapse:separate;border-spacing:0 6px;margin-top:6px}
+  table.rules th{font-size:12px;color:#9a7458;font-weight:800;padding:0 0 2px}
+  table.rules td:first-child{font-weight:800;font-size:14px;color:#6a3f22}
+  table.rules td small{display:block;font-size:11px;color:#a08066;font-weight:700}
+  table.rules td{text-align:center}
+  table.rules td:first-child{text-align:left}
+  .ck{width:46px;height:38px;padding:0;border-radius:11px;background:#f5e8da;color:transparent;font-size:18px;
+    box-shadow:inset 0 0 0 2px #ecdcc9}
+  .ck.on{background:#c0392b;color:#fff;box-shadow:none}
+  .rule-note{font-size:12px;font-weight:700;color:#9a7458;margin:4px 0 0;line-height:1.5}
+
+  /* 금수 표 (게임 화면 오른쪽) */
+  #g-top{display:flex;gap:10px;align-items:stretch}
+  #g-main{flex:1;min-width:0}
+  .side{flex:none;width:92px;background:#fbf1e6;border-radius:14px;padding:8px 8px;font-size:12px;font-weight:800;
+    color:#6a3f22;display:flex;flex-direction:column;gap:5px}
+  .side .t{font-size:11px;color:#c0392b;letter-spacing:.5px}
+  .side .c{display:flex;gap:5px;align-items:flex-start;line-height:1.35}
+  .side .c .stone{width:13px;height:13px;margin-top:2px}
+  .side .c span{word-break:keep-all}
+  .side .none{color:#a08066}
+
   .board-wrap{padding:8px;border-radius:16px;background:linear-gradient(135deg,#f1c98f,#e2ad6c);
     box-shadow:inset 0 0 0 2px #c98f52}
   #board{display:block;width:100%;height:auto;touch-action:manipulation;user-select:none;-webkit-user-select:none}
@@ -88,14 +114,30 @@
     <input id="name" maxlength="8" placeholder="내 이름 (선택)" autocomplete="off">
     <h2 style="margin:16px 0 8px">누가 먼저 둘지 (먼저 두면 흑)</h2>
     <div id="pick-kind"></div>
+    <div id="rules-box">
+      <h2 style="margin:16px 0 8px">안 되는 수 (금수) ✕</h2>
+      <div class="presets" id="rule-presets">
+        <button data-p="say">세이클럽식</button><button data-p="renju">렌주</button><button data-p="free">금수 없음</button>
+      </div>
+      <table class="rules">
+        <tr><th></th><th>흑 ●</th><th>백 ○</th></tr>
+        <tr><td>삼삼<small>열린 삼 두 개를 한 번에</small></td>
+          <td><button class="ck" aria-pressed="false" data-c="black" data-k="three">✕</button></td><td><button class="ck" aria-pressed="false" data-c="white" data-k="three">✕</button></td></tr>
+        <tr><td>사사<small>넷 두 개를 한 번에</small></td>
+          <td><button class="ck" aria-pressed="false" data-c="black" data-k="four">✕</button></td><td><button class="ck" aria-pressed="false" data-c="white" data-k="four">✕</button></td></tr>
+        <tr><td>장목<small>여섯 개 이상 잇기</small></td>
+          <td><button class="ck" aria-pressed="false" data-c="black" data-k="long">✕</button></td><td><button class="ck" aria-pressed="false" data-c="white" data-k="long">✕</button></td></tr>
+      </table>
+      <p class="rule-note" id="rule-note"></p>
+    </div>
     <div style="height:12px"></div>
     <button class="primary" id="b-create">새 방 만들기</button>
     <h2 style="margin-top:22px">코드로 들어가기</h2>
     <input id="code" inputmode="numeric" maxlength="4" placeholder="0000" autocomplete="off">
     <div style="height:10px"></div>
     <button class="ghost" id="b-join">들어가기</button>
-    <p class="muted" style="margin-top:14px">먼저 두는 흑이 너무 유리해서, 흑만 쌍삼(열린 삼 두 개를 한 번에)을 못 둬요.</p>
   </section>
+
 
   <!-- 2. 대기 -->
   <section id="s-wait" class="card hide">
@@ -105,6 +147,7 @@
     </div>
     <div style="height:10px"></div>
     <button class="ghost" id="b-share">초대 링크 복사</button>
+    <p class="muted" style="margin-top:12px" id="w-rules"></p>
     <p class="muted" style="margin-top:14px"><span class="dots">상대를 기다리는 중</span></p>
     <p class="muted" style="margin:14px 0 10px;font-size:13px">둘 다 방을 만들었다면 한 명은 나가서 상대 코드로 들어가요</p>
     <button class="ghost" id="b-leave-wait">나가서 다른 코드로 들어가기</button>
@@ -116,6 +159,7 @@
   <!-- 4. 판 (끝난 뒤에도 판은 남겨서 보여준다) -->
   <section id="s-game" class="hide" style="display:flex;flex-direction:column;gap:12px">
     <div class="card" id="g-top">
+     <div id="g-main">
       <div class="result hide" id="d-box">
         <div class="big" id="d-big">—</div>
         <p class="muted" id="d-sub"></p>
@@ -129,6 +173,8 @@
         </div>
         <div class="banner you" id="g-banner">—</div>
       </div>
+     </div>
+     <div class="side" id="g-side"></div>
     </div>
     <div class="card" style="padding:10px">
       <div class="board-wrap"><svg id="board" viewBox="0 0 320 320" aria-label="오목판"></svg></div>
@@ -148,10 +194,11 @@
 <script src="../couple-common/picker.js"></script>
 <script>
 /* =========================================================================
-   오목 — 15×15, 먼저 두는 쪽이 흑. 다섯 개를 먼저 이으면 이긴다. 흑은 쌍삼 금지.
+   오목 — 15×15, 먼저 두는 쪽이 흑. 다섯 개를 먼저 이으면 이긴다.
+   금수(삼삼·사사·장목, 흑백 따로)는 방을 만들 때 고른다. 기본은 세이클럽식.
    흐름: 대기 → 선 정하기(미니게임) → 번갈아 두기 → 끝
    상태는 서버(POST /api/gomoku)가 들고 있고, 여기는 그리기만 한다.
-   규칙은 netlify/lib/gomoku-core.mjs 가 정답이다. 흑의 금지 자리도 서버가 계산해 준다.
+   규칙은 netlify/lib/gomoku-core.mjs 가 정답이다. 금수 자리도 서버가 계산해 준다.
    ========================================================================= */
 const API = '/api/gomoku', SAVE = 'couple-gomoku', N = 15, POLL_MS = 1400, POLL_SLOW_MS = 3200;
 const $ = (id) => document.getElementById(id);
@@ -287,7 +334,7 @@ function drawBoard() {
         'stroke-linecap': 'round', opacity: 0.75 }, layer.stones);
     }
   }
-  // 흑 차례 금지 자리 ×
+  // 내 차례 금수 자리 ×
   layer.marks.textContent = '';
   for (const [r, c] of (st.forbidden || [])) {
     const d = GAP * 0.2;
@@ -299,14 +346,16 @@ function drawBoard() {
   if (ghost && st.yourTurn) stone(layer.ghost, ghost[0], ghost[1], st.myColor, { opacity: 0.55 });
 }
 const occupied = (r, c) => st.moves.some(([a, b]) => a === r && b === c);
-const forbiddenAt = (r, c) => (st.forbidden || []).some(([a, b]) => a === r && b === c);
+const forbiddenAt = (r, c) => { const f = (st.forbidden || []).find(([a, b]) => a === r && b === c); return f ? f[2] : null; };
+const WHY_MSG = { three: '삼삼이라 못 둬요 (× 자리)', four: '사사라 못 둬요 (× 자리)', long: '여섯 개 이상(장목)이 돼서 못 둬요 (× 자리)' };
 svg.addEventListener('click', (e) => {
   if (!st || st.phase !== 'play' || !st.yourTurn) return;
   const box = svg.getBoundingClientRect();
   const px = (e.clientX - box.left) / box.width * 320, py = (e.clientY - box.top) / box.height * 320;
   const c = Math.round((px - M) / GAP), r = Math.round((py - M) / GAP);
   if (r < 0 || c < 0 || r >= N || c >= N || occupied(r, c)) return;
-  if (forbiddenAt(r, c)) { err('흑은 쌍삼을 둘 수 없어요 (× 자리)'); return; }
+  const why = forbiddenAt(r, c);
+  if (why) { err(WHY_MSG[why] || '거기엔 못 둬요'); return; }
   if (ghost && ghost[0] === r && ghost[1] === c) { place(); return; }   // 같은 자리 두 번 = 두기
   ghost = [r, c];
   drawBoard(); controls();
@@ -316,6 +365,56 @@ function place() {
   const [r, c] = ghost;
   act(async () => { beep(true); const d = await api('place', { r, c }); ghost = null; adopt(d); });
 }
+
+/* -------------------------------------------------------------- 금수
+   묶음 값은 gomoku-core.mjs 의 PRESETS 와 같다. 서버가 받은 값을 다시 거르니 여기는 고르기만 한다. */
+const RULE_KEYS = ['three', 'four', 'long'], RULE_NAME = { three: '삼삼', four: '사사', long: '장목' };
+const RR = (three, four, long) => ({ three, four, long });
+const PRESETS = {
+  say: { black: RR(true, false, true), white: RR(true, false, true) },
+  renju: { black: RR(true, true, true), white: RR(false, false, false) },
+  free: { black: RR(false, false, false), white: RR(false, false, false) },
+};
+const PRESET_NOTE = {
+  say: '세이클럽·한게임 시절 일반룰이에요. 흑백 모두 삼삼 금지, 여섯 개 이상(장목)은 안 쳐줘서 그 자리엔 못 둬요. 사사는 돼요.',
+  renju: '대회에서 쓰는 렌주룰이에요. 먼저 두는 흑만 삼삼·사사·장목이 금지고, 백은 자유예요.',
+  free: '아무 데나 둬요. 먼저 두는 흑이 많이 유리해요.',
+};
+const RULE_SAVE = SAVE + ':rules';
+const sameRules = (a, b) => ['black', 'white'].every((c) => RULE_KEYS.every((k) => !!a[c][k] === !!b[c][k]));
+const presetOf = (r) => Object.keys(PRESETS).find((k) => sameRules(PRESETS[k], r)) || null;
+const ruleList = (one) => RULE_KEYS.filter((k) => one && one[k]).map((k) => RULE_NAME[k]).join(' · ');
+let myRules = (() => {
+  try { const r = JSON.parse(localStorage.getItem(RULE_SAVE) || 'null'); if (r && r.black && r.white) return r; } catch (e) {}
+  return JSON.parse(JSON.stringify(PRESETS.say));
+})();
+function drawRuleEditor() {
+  const p = presetOf(myRules);
+  document.querySelectorAll('#rule-presets button').forEach((b) => b.classList.toggle('on', b.dataset.p === p));
+  document.querySelectorAll('#rules-box .ck').forEach((b) => {
+    const on = !!myRules[b.dataset.c][b.dataset.k];
+    b.classList.toggle('on', on); b.setAttribute('aria-pressed', on);
+  });
+  $('rule-note').textContent = p ? PRESET_NOTE[p] : '직접 고른 규칙이에요. ✕ 칸이 그 돌에게 금지예요.';
+  try { localStorage.setItem(RULE_SAVE, JSON.stringify(myRules)); } catch (e) {}
+}
+document.querySelectorAll('#rule-presets button').forEach((b) => (b.onclick = () => {
+  myRules = JSON.parse(JSON.stringify(PRESETS[b.dataset.p])); drawRuleEditor();
+}));
+document.querySelectorAll('#rules-box .ck').forEach((b) => (b.onclick = () => {
+  myRules[b.dataset.c][b.dataset.k] = !myRules[b.dataset.c][b.dataset.k]; drawRuleEditor();
+}));
+drawRuleEditor();
+// 게임 화면 오른쪽 금수 표
+function drawSide() {
+  const r = st.rules || PRESETS.free;
+  const row = (c) => {
+    const t = ruleList(r[c]);
+    return '<div class="c"><i class="stone ' + c + '"></i><span' + (t ? '' : ' class="none"') + '>' + (t || '없음') + '</span></div>';
+  };
+  $('g-side').innerHTML = '<div class="t">✕ 금수</div>' + row('black') + row('white');
+}
+const rulesLine = (r) => '금수 — 흑 ' + (ruleList(r.black) || '없음') + ' / 백 ' + (ruleList(r.white) || '없음');
 
 /* -------------------------------------------------------------- 선 정하기 */
 const chooser = Picker.chooser($('pick-kind'));
@@ -348,6 +447,7 @@ function render() {
     show('s-wait');
     $('sub').textContent = '방 코드를 알려주고 같이 들어와요';
     $('w-code').textContent = st.code;
+    $('w-rules').textContent = st.rules ? rulesLine(st.rules) : '';
     return;
   }
 
@@ -355,7 +455,8 @@ function render() {
     show('s-pick');
     $('sub').textContent = '방 ' + st.code + ' · 누가 먼저(흑) 둘까요';
     picker.update(st.pick, { you: S.you, meName: meName(), youName: youName(), round: st.round,
-      extra: (meFirst) => (meFirst ? '나는 흑 ● 먼저 둬요 (쌍삼 금지)' : '나는 백 ○ — ' + jo(youName(), '이', '가') + ' 흑으로 먼저 둬요') });
+      extra: (meFirst) => (meFirst ? '나는 흑 ● 먼저 둬요' : '나는 백 ○ — ' + jo(youName(), '이', '가') + ' 흑으로 먼저 둬요')
+        + (st.rules ? ' · ' + rulesLine(st.rules) : '') });
     return;
   }
 
@@ -368,6 +469,7 @@ function render() {
   $('w-you-n').textContent = youName();
   $('w-me').classList.toggle('on', st.phase === 'play' && st.turn === S.you);
   $('w-you').classList.toggle('on', st.phase === 'play' && st.turn !== S.you);
+  drawSide();
 
   if (st.phase === 'play') {
     $('d-box').classList.add('hide'); $('g-info').classList.remove('hide');
@@ -404,7 +506,7 @@ $('b-resign').onclick = () => {
 };
 $('b-create').onclick = () => act(async () => {
   S.name = $('name').value.trim();
-  adopt(await api('create', { name: S.name, pick: chooser.get() }));
+  adopt(await api('create', { name: S.name, pick: chooser.get(), rules: myRules }));
   poll();
 });
 $('b-join').onclick = () => act(async () => {

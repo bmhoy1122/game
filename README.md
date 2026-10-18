@@ -8,7 +8,7 @@
 | `couple-bingo/` | 커플 빙고 — 번갈아 숫자를 불러 3줄 먼저 | `/api/bingo` |
 | `couple-balance/` | 이심전심 — 둘이 동시에 고르고 같이 공개, 일치율 | `/api/balance` |
 | `couple-baseball/` | 숫자야구 — 숨긴 숫자 세 개를 번갈아 맞히기 | `/api/baseball` |
-| `couple-gomoku/` | 오목 — 15×15, 흑만 쌍삼 금지 | `/api/gomoku` |
+| `couple-gomoku/` | 오목 — 15×15, 금수(삼삼·사사·장목)를 흑백 따로 고른다 | `/api/gomoku` |
 
 ```
 /                       허브(게임 목록)  → https://<사이트>.netlify.app/
