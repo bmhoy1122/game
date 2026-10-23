@@ -17,8 +17,8 @@
  *
  * 여기엔 @netlify/blobs import 가 없다. 저장소는 handle() 의 인자로 받는다.
  */
-import { handleRoom } from './room-kit.mjs';
-import { pickKind, firstOf, pickView, pickThrow } from './first-pick.mjs';
+import { handleRoom, shuffle } from './room-kit.mjs';
+import { pickKind, firstOf, pickView, pickThrow, pickBot } from './first-pick.mjs';
 
 export const SIZE = 5;
 export const WIN_LINES = 3;          // 몇 줄이면 이기나
@@ -120,8 +120,37 @@ const actions = {
   },
 };
 
+/* ---- 혼자 하기 봇 (적당한 난이도) ----
+ * 판은 아무렇게나 섞고, 부를 땐 내 판만 본다(사람 판은 서버가 알지만 안 본다 — 공정하게).
+ * 숫자마다 '그 칸이 든 줄들의 진행도' 를 더해 가장 좋은 걸 부르고, 20% 는 두 번째로 좋은 걸 부른다. */
+export function botMove(ctx, rnd = Math.random) {
+  const s = status(ctx);
+  if (s.phase === 'pick') return pickBot(ctx, rnd);
+  if (s.phase === 'setup') {
+    if (ctx.me.ready) return null;
+    return { act: 'ready', body: { board: shuffle([...Array(CELLS)].map((_, i) => i + 1), rnd) } };
+  }
+  if (s.phase !== 'play' || s.turn !== ctx.idx) return null;
+  const board = ctx.me.board, called = new Set(ctx.room.called);
+  const scored = [];
+  for (let n = 1; n <= CELLS; n++) {
+    if (called.has(n)) continue;
+    const i = board.indexOf(n);
+    let sc = rnd();
+    for (const line of LINES) {
+      if (!line.includes(i)) continue;
+      const hits = line.filter((j) => called.has(board[j])).length;
+      sc += hits === SIZE - 1 ? 100 : hits * hits + 1;
+    }
+    scored.push([sc, n]);
+  }
+  scored.sort((a, b) => b[0] - a[0]);
+  const pick = scored.length > 1 && scored[0][0] < 100 && rnd() < 0.2 ? scored[1] : scored[0];
+  return { act: 'call', body: { n: pick[1] } };
+}
+
 export const bingo = {
-  setup, view, actions,
+  setup, view, actions, bot: botMove,
   options: (body) => ({ pick: pickKind(body.pick) }),
   finished: (ctx) => status(ctx).phase === 'done',
 };

@@ -98,8 +98,16 @@ const actions = {
   },
 };
 
+/* ---- 혼자 하기 봇 ---- 질문마다 동전 던지듯 고른다. '다음' 은 사람이 누른다 */
+export function botMove(ctx, rnd = Math.random) {
+  const { room, me, joined } = ctx;
+  if (!joined || room.qi >= room.qs.length) return null;
+  if (pickOf(me, room.qi) !== null) return null;
+  return { act: 'pick', body: { qi: room.qi, choice: rnd() < 0.5 ? 0 : 1 } };
+}
+
 export const balance = {
-  setup, view, actions,
+  setup, view, actions, bot: botMove,
   finished: (ctx) => ctx.room.qi >= ctx.room.qs.length,
 };
 

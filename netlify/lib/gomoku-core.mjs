@@ -21,7 +21,7 @@
  * 선공은 미니게임(first-pick)으로 정한다.
  */
 import { handleRoom } from './room-kit.mjs';
-import { pickKind, firstOf, pickView, pickThrow } from './first-pick.mjs';
+import { pickKind, firstOf, pickView, pickThrow, pickBot } from './first-pick.mjs';
 
 export const N = 15;
 const DIRS = [[0, 1], [1, 0], [1, 1], [1, -1]];
@@ -222,8 +222,58 @@ const actions = {
   },
 };
 
+/* ---- 혼자 하기 봇 (적당한 난이도) ----
+ * 돌 근처 빈 칸마다 '내가 두면' 점수 + '상대가 두면' 점수 × 0.9 를 더해 가장 큰 칸.
+ * 줄 길이와 열린 끝 수로만 점수를 매긴다 (띈 모양은 안 본다). 급하지 않을 땐 15% 확률로 두 번째 수 —
+ * 매번 최선만 두면 사람이 거의 못 이긴다. 금수 자리는 후보에서 뺀다. 다섯은 무조건, 상대 다섯은 무조건 막는다. */
+function lineScore(len, open, exact) {
+  if (len >= 5) return exact && len > 5 ? 0 : 100000;
+  if (len === 4) return open === 2 ? 10000 : open === 1 ? 1200 : 0;
+  if (len === 3) return open === 2 ? 1000 : open === 1 ? 120 : 0;
+  if (len === 2) return open === 2 ? 60 : open === 1 ? 12 : 0;
+  return open === 2 ? 4 : 1;
+}
+function cellScore(b, r, c, color, exact) {
+  b[r * N + c] = color;
+  let total = 0;
+  for (const [dr, dc] of DIRS) {
+    const [s, e] = span(b, r, c, dr, dc, color);
+    const open = (at(b, r - (s + 1) * dr, c - (s + 1) * dc) === EMPTY ? 1 : 0) + (at(b, r + (e + 1) * dr, c + (e + 1) * dc) === EMPTY ? 1 : 0);
+    total += lineScore(s + e + 1, open, exact);
+  }
+  b[r * N + c] = EMPTY;
+  return total;
+}
+const nearStone = (b, r, c, d) => {
+  for (let dr = -d; dr <= d; dr++) for (let dc = -d; dc <= d; dc++) if ((dr || dc) && at(b, r + dr, c + dc) > 0) return true;
+  return false;
+};
+export function botMove(ctx, rnd = Math.random) {
+  const s = status(ctx);
+  if (s.phase === 'pick') return pickBot(ctx, rnd);
+  if (s.phase !== 'play' || s.turn !== ctx.idx) return null;
+  if (!ctx.room.moves.length) return { act: 'place', body: { r: 7, c: 7 } };
+  const me = s.first === ctx.idx ? BLACK : WHITE, opp = me === BLACK ? WHITE : BLACK;
+  const myRule = s.rules[me === BLACK ? 'black' : 'white'], oppRule = s.rules[opp === BLACK ? 'black' : 'white'];
+  const b = s.b;
+  const top = [];                                   // 상위 2개 [score, r, c]
+  for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
+    if (b[r * N + c] !== EMPTY || !nearStone(b, r, c, 2)) continue;
+    if (forbiddenWhy(b, r, c, me, myRule)) continue;
+    const sc = cellScore(b, r, c, me, myRule.long) + cellScore(b, r, c, opp, oppRule.long) * 0.9 + rnd() * 0.5;
+    if (!top[0] || sc > top[0][0]) top.unshift([sc, r, c]); else if (!top[1] || sc > top[1][0]) top[1] = [sc, r, c];
+    if (top.length > 2) top.length = 2;
+  }
+  if (!top.length) {                                // 근처가 다 막혔거나 금수 — 아무 빈 칸
+    for (let i = 0; i < N * N; i++) if (b[i] === EMPTY && !forbiddenWhy(b, Math.floor(i / N), i % N, me, myRule)) return { act: 'place', body: { r: Math.floor(i / N), c: i % N } };
+    return null;
+  }
+  const pick = top.length > 1 && top[0][0] < 1500 && rnd() < 0.15 ? top[1] : top[0];
+  return { act: 'place', body: { r: pick[1], c: pick[2] } };
+}
+
 export const gomoku = {
-  setup, view, actions,
+  setup, view, actions, bot: botMove,
   options: (body) => ({ pick: pickKind(body.pick), rules: normRules(body.rules) }),
   finished: (ctx) => status(ctx).phase === 'done',
 };

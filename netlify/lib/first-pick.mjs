@@ -148,3 +148,21 @@ export function pickThrow(ctx) {
   ctx.touchMe = true;
   return null;
 }
+
+/* 봇(1번 자리)의 선 정하기 — 아직 안 낸 단계가 있으면 아무 손이나 낸다. 적당한 난이도 = 그냥 무작위 */
+export function pickBot(ctx, rnd = Math.random) {
+  const kind = pickKind(ctx.room.opts && ctx.room.opts.pick);
+  if (kind === 'coin' || ctx.idx !== 1) return null;
+  const A = ctx.docs[0].throws || [], B = ctx.docs[1].throws || [];
+  const r = resolve(kind, A, B);
+  if (r.winner !== null) return null;
+  const cur = Math.min(A.length, B.length);
+  if (B.length !== cur) return null;                 // 이미 냈고 사람을 기다리는 중
+  const sign = () => SIGNS[Math.floor(rnd() * 3)];
+  const n = need(kind, cur);
+  let value;
+  if (n === 'sign') value = sign();
+  else if (n === 'pair') { const a = sign(); let b = sign(); while (b === a) b = sign(); value = [a, b]; }
+  else value = rnd() < 0.5 ? 0 : 1;
+  return { act: 'throw', body: { value } };
+}

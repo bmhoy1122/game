@@ -13,7 +13,7 @@
  * 선공은 둘이 미니게임(first-pick)으로 정한다. 기록에서 계산하니 따로 저장하지 않는다.
  */
 import { handleRoom } from './room-kit.mjs';
-import { pickKind, firstOf, pickView, pickThrow } from './first-pick.mjs';
+import { pickKind, firstOf, pickView, pickThrow, pickBot } from './first-pick.mjs';
 
 export const DIGITS = 3;
 export const MAX_GUESSES = 20;        // 한 사람당. 여기까지 둘 다 못 맞히면 무승부
@@ -112,8 +112,30 @@ const actions = {
   },
 };
 
+/* ---- 혼자 하기 봇 (적당한 난이도) ----
+ * 비밀 숫자는 무작위. 맞힐 땐 지금까지 자기 결과(스트라이크·볼)와 모순 없는 후보 중 아무거나 —
+ * 사람이 머리로 하는 것과 같은 방식이라 평균 5~6번에 맞힌다 (최적 전략은 일부러 안 쓴다). */
+const ALL_NUMBERS = (() => {
+  const out = [];
+  for (let a = 1; a <= 9; a++) for (let b = 1; b <= 9; b++) for (let c = 1; c <= 9; c++) if (a !== b && b !== c && a !== c) out.push('' + a + b + c);
+  return out;
+})();
+export function botMove(ctx, rnd = Math.random) {
+  const st = statusOf(ctx);
+  if (st.phase === 'pick') return pickBot(ctx, rnd);
+  if (st.phase === 'setup') {
+    if (ctx.me.secret) return null;
+    return { act: 'secret', body: { value: ALL_NUMBERS[Math.floor(rnd() * ALL_NUMBERS.length)] } };
+  }
+  if (st.phase !== 'play' || st.turn !== ctx.idx) return null;
+  const mine = ctx.room.log.filter((e) => e.by === ctx.idx);
+  let cands = ALL_NUMBERS.filter((c) => mine.every((e) => { const j = judge(c, e.g); return j.s === e.s && j.b === e.b; }));
+  if (!cands.length) cands = ALL_NUMBERS;
+  return { act: 'guess', body: { value: cands[Math.floor(rnd() * cands.length)] } };
+}
+
 export const baseball = {
-  setup, view, actions,
+  setup, view, actions, bot: botMove,
   options: (body) => ({ pick: pickKind(body.pick) }),
   finished: (ctx) => statusOf(ctx).phase === 'done',
 };
