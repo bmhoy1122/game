@@ -216,11 +216,20 @@ function adopt(data) {
   if (data.token) S.token = data.token;
   if (data.code) S.code = data.code;
   if (typeof data.you === 'number') S.you = data.you;
+  tellOpener();
   const roundChanged = !st || st.round !== data.round;
   st = data;
   if (roundChanged) { entry = ''; loadMemo(); }
   save();
   render();
+}
+/* 탕비실(신영 메신저 lounge.html)이 window.open 으로 이 페이지를 열었으면, 방 코드가 생겼을 때
+ * 한 번 알려준다 — 탕비실이 방 사람들에게 "참가하기" 초대를 띄운다. 네 자리 코드뿐이라 대상 origin 은 가리지 않는다. */
+let toldCode = null;
+function tellOpener() {
+  if (!S.code || toldCode === S.code || !window.opener) return;
+  toldCode = S.code;
+  try { window.opener.postMessage({ type: 'couple-room', game: SAVE.replace('couple-', ''), code: S.code, you: S.you, name: S.name }, '*'); } catch (e) {}
 }
 function save() {
   try { localStorage.setItem(SAVE, JSON.stringify({ code: S.code, token: S.token, name: S.name })); } catch (e) {}
@@ -514,6 +523,8 @@ $('b-leave-wait').onclick = leave;
   let saved = null;
   try { saved = JSON.parse(localStorage.getItem(SAVE) || 'null'); } catch (e) {}
   if (saved && saved.name) { S.name = saved.name; $('name').value = saved.name; }
+  const urlName = (new URLSearchParams(location.search).get('name') || '').trim().slice(0, 8);
+  if (urlName && !$('name').value) { S.name = urlName; $('name').value = urlName; }   // 탕비실 등에서 이름을 넘겨준 경우
 
   if (saved && saved.code && saved.token && (!urlCode || urlCode === saved.code)) {
     S.code = saved.code; S.token = saved.token;
