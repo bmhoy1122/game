@@ -100,6 +100,8 @@
     <div id="pick-kind"></div>
     <div style="height:12px"></div>
     <button class="primary" id="b-create">새 방 만들기</button>
+    <div style="height:8px"></div>
+    <button class="ghost" id="b-bot">🤖 혼자 하기 (AI 상대)</button>
     <h2 style="margin-top:22px">코드로 들어가기</h2>
     <input id="code" inputmode="numeric" maxlength="4" placeholder="0000" autocomplete="off">
     <div style="height:10px"></div>
@@ -198,9 +200,9 @@ function adopt(data) {
   if (data.token) S.token = data.token;
   if (data.code) S.code = data.code;
   if (typeof data.you === 'number') S.you = data.you;
-  tellOpener();
   if (st && st.round !== data.round) localBoard = null;     // 새 판이면 새로 섞는다
   st = data;
+  tellOpener();                                   // st 가 갱신된 뒤 (bot 여부를 같이 보낸다)
   save();
   render();
 }
@@ -210,7 +212,7 @@ let toldCode = null;
 function tellOpener() {
   if (!S.code || toldCode === S.code || !window.opener) return;
   toldCode = S.code;
-  try { window.opener.postMessage({ type: 'couple-room', game: SAVE.replace('couple-', ''), code: S.code, you: S.you, name: S.name }, '*'); } catch (e) {}
+  try { window.opener.postMessage({ type: 'couple-room', game: SAVE.replace('couple-', ''), code: S.code, you: S.you, name: S.name, bot: !!(st && st.bot) }, '*'); } catch (e) {}
 }
 function save() {
   try { localStorage.setItem(SAVE, JSON.stringify({ code: S.code, token: S.token, name: S.name })); } catch (e) {}
@@ -406,11 +408,13 @@ function render() {
 }
 
 /* ------------------------------------------------------------------ 버튼 */
-$('b-create').onclick = () => act(async () => {
+const createRoom = (bot) => act(async () => {
   S.name = $('name').value.trim();
-  adopt(await api('create', { name: S.name, pick: chooser.get() }));
+  adopt(await api('create', { name: S.name, pick: chooser.get() , bot: !!bot }));
   poll();
 });
+$('b-create').onclick = () => createRoom(false);
+$('b-bot').onclick = () => createRoom(true);     // 혼자 하기 — 서버가 1번 자리에 AI 를 앉힌다
 $('b-join').onclick = () => act(async () => {
   const c = $('code').value.trim();
   if (!/^\d{4}$/.test(c)) throw new Error('네 자리 숫자를 넣어주세요');
@@ -463,6 +467,12 @@ $('b-leave-wait').onclick = leave;
   if (saved && saved.code && saved.token && (!urlCode || urlCode === saved.code)) {
     S.code = saved.code; S.token = saved.token;
     try { adopt(await api('state')); poll(); return; } catch (e) { forget(); }
+  }
+  if (new URLSearchParams(location.search).get('bot') === '1') {   // 탕비실 '혼자 하기' — 바로 AI 방을 만든다
+    history.replaceState(null, '', location.pathname);
+    render();
+    createRoom(true);
+    return;
   }
   if (urlCode && /^\d{4}$/.test(urlCode)) {
     $('code').value = urlCode;

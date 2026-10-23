@@ -66,6 +66,7 @@
 │  ├─ baseball-smoke.js  숫자야구 규칙 테스트
 │  ├─ gomoku-smoke.js    오목 규칙 테스트 (삼삼·사사·장목 판정 포함)
 │  ├─ pick-smoke.js      선 정하기 미니게임 테스트
+│  ├─ bot-smoke.js       혼자 하기(AI 상대) 테스트 — 네 게임 끝까지
 │  └─ couple-dev.js      커플 게임 넷 로컬 서버
 ├─ netlify/
 │  ├─ functions/         함수 껍데기만. 파일 하나 = 함수 하나 (bingo · balance · baseball · gomoku)
@@ -92,7 +93,8 @@ node tools/bingo-smoke.js           # 커플 빙고 규칙 테스트
 node tools/balance-smoke.js         # 이심전심 규칙 테스트
 node tools/baseball-smoke.js        # 숫자야구 규칙 테스트
 node tools/gomoku-smoke.js          # 오목 규칙 테스트
-node tools/pick-smoke.js            # 선 정하기 미니게임  ← 커플 쪽은 전부 npm install 없이 돈다
+node tools/pick-smoke.js            # 선 정하기 미니게임
+node tools/bot-smoke.js             # 혼자 하기(AI 상대)  ← 커플 쪽은 전부 npm install 없이 돈다
 node tools/couple-dev.js            # 커플 게임 넷 로컬 서버 → localhost:8787
 python3 -m http.server 8000         # http://localhost:8000/evening-night/
 ```
@@ -366,6 +368,22 @@ GRAV = 0.6          GRAB_HOLD = 20     (Z 꾹 → 안기, 약 0.33초)
   나가기가 없으면 영영 그 방에 갇힌다(둘 다 방을 만들었을 때 실제로 갇혔다). 나가기는 이 폰의 저장만 지우고
   방은 그대로 둔다. 게임 중엔 한 번 묻는다. 폴링 응답이 나간 뒤에 도착해도 다시 끌려가지 않게 토큰을 비교한다.
 - 숫자야구 메모(길게 눌러 ✕ → ? → 없음)는 그 폰의 `localStorage` 에만, 방·판 번호별로 둔다.
+
+### 혼자 하기 (AI 상대)
+
+네 게임 다 홈 화면 **🤖 혼자 하기** 버튼(또는 `?bot=1`)으로 1번 자리에 AI 가 앉은 방을 만든다. 규칙·화면은 둘이 할 때와 같다.
+- `room-kit`: `create` 에 `bot:true` 면 `players[1] = { token:null, name:'🤖 AI', bot:true }`. 그 방엔 아무도 못 들어온다(409).
+  응답에 `bot:true` 가 실린다. **봇은 사람의 요청을 처리할 때 움직인다** — `state` 폴링 포함, 마지막 변화(`room.lastAt`)에서
+  `BOT_DELAY`(0.9초) 지난 뒤 **한 번에 한 행동**. 폴링이 1.4초라 사람 눈엔 1~3초 뒤 두는 것처럼 보인다. 봇도 그 게임의
+  `actions[act]` 를 그대로 거쳐서 규칙 검사를 똑같이 받는다(금수·차례·중복). 봇 방은 사람이 한 명이라 폴링 중 쓰기가 생겨도
+  묻힐 상대가 없다 — "폴링은 읽기 전용" 원칙의 유일한 예외.
+- 각 core 의 `bot(ctx, rnd)` 가 `{ act, body }` 를 돌려준다(없으면 null). 난이도는 '적당히':
+  오목 — 돌 근처 칸마다 (내 줄 점수 + 상대 줄 점수×0.9), 다섯·상대 다섯은 무조건, 급하지 않으면 15% 는 두 번째 수.
+  빙고 — 판 무작위, 부를 땐 **내 판만** 보고 줄 진행도 합이 큰 숫자(20% 는 두 번째). 사람 판은 서버가 알지만 안 본다.
+  숫자야구 — 비밀 무작위, 자기 결과와 모순 없는 후보 중 무작위(평균 5~6번). 이심전심 — 동전 던지기.
+  선 정하기(`first-pick.pickBot`) — 아무 손. 하나빼기 두 손은 서로 다르게. 랜덤(coin)은 낼 게 없다.
+- 다시 하기(restart)는 공용 문서만 고치므로 봇 자리가 그대로 남는다. 테스트: `node tools/bot-smoke.js`.
+- 봇 방에서는 `tellOpener` 가 `bot:true` 를 같이 보내 탕비실이 초대를 띄우지 않는다.
 
 ### 탕비실(신영 메신저) 연결
 

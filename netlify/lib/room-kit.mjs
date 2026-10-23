@@ -18,6 +18,17 @@
  */
 export const ROOM_TTL = 12 * 60 * 60 * 1000;
 
+/* 혼자 하기 — 1번 자리에 AI 가 앉는다 (bmhoy1122/messenger 탕비실 요청, 2026-10).
+ * 방을 만들 때 body.bot 이면 players[1] = { bot:true } (token 없음 → 아무도 그 자리로 못 들어온다).
+ * 봇은 사람의 요청(state 폴링 포함)을 처리할 때 움직인다 — 마지막 변화(lastAt)에서 BOT_DELAY 가
+ * 지났을 때 한 번에 한 행동. 폴링이 1.4초라 사람 눈엔 1~3초 뒤 두는 것처럼 보인다.
+ * 게임은 bot(ctx) 로 '지금 할 행동' { act, body } 을 돌려주고(없으면 null), 실제 적용은 그 게임의
+ * actions[act] 가 그대로 한다 — 봇도 규칙 검사를 똑같이 받는다. 봇 방은 사람이 한 명뿐이라
+ * 폴링 중 쓰기가 생겨도 묻힐 상대가 없다. */
+export const BOT_NAME = '🤖 AI';
+export const BOT_DELAY = 900;
+export const isBotRoom = (room) => !!(room && room.players && room.players[1] && room.players[1].bot);
+
 /* 문자열 → 0~1 난수 생성기 (FNV-1a 로 씨앗을 만들고 mulberry32 로 돌린다) */
 export function seeded(str) {
   let h = 2166136261 >>> 0;
@@ -66,13 +77,29 @@ export async function handleRoom(game, body, store, now = Date.now()) {
     const o = ctx.room.players[1 - ctx.idx];
     const me = ctx.room.players[ctx.idx];
     return {
-      code: ctx.room.code, round: ctx.room.round, you: ctx.idx,
+      code: ctx.room.code, round: ctx.room.round, you: ctx.idx, bot: isBotRoom(ctx.room),
       name: me ? me.name : '',
       opponent: o ? { joined: true, name: o.name } : { joined: false, name: '' },
       ...game.view(ctx),
     };
   }
   const ok = (ctx, extra) => ({ status: 200, body: { ...(extra || {}), ...view(ctx) } });
+
+  // 봇 차례 — 사람의 요청을 처리하기 전에 한 행동만. 바꾼 게 있으면 true
+  async function botTurn(room) {
+    if (!isBotRoom(room) || !game.bot) return false;
+    if (now - (room.lastAt || 0) < BOT_DELAY) return false;
+    const b = await load(room, 1);
+    if (game.finished(b)) return false;
+    const mv = game.bot(b);
+    if (!mv || !game.actions[mv.act]) return false;
+    b.body = mv.body || {};
+    if (game.actions[mv.act](b)) return false;       // 규칙에 걸리면 이번엔 쉰다
+    room.lastAt = now;
+    if (b.touchMe) await store.set(playerKey(room.code, 1), b.me);
+    await store.set(roomKey(room.code), room);        // lastAt 과 (차례제 행동이면) 공용 문서
+    return true;
+  }
 
   if (act === 'create') {
     let code = null;
@@ -84,6 +111,7 @@ export async function handleRoom(game, body, store, now = Date.now()) {
     const token = crypto.randomUUID();
     const room = { code, created: now, round: 1, players: [{ token, name: cleanName(body.name) }, null] };
     room.opts = game.options ? game.options(body || {}) : {};
+    if (body.bot && game.bot) { room.players[1] = { token: null, name: BOT_NAME, bot: true }; room.lastAt = now; }
     game.setup(room);
     await store.set(roomKey(code), room);
     return ok(await load(room, 0), { token });
@@ -95,6 +123,7 @@ export async function handleRoom(game, body, store, now = Date.now()) {
     if (!alive(room, now)) return bad('그런 방이 없어요. 코드를 다시 확인해주세요', 404);
     const back = room.players.findIndex((p) => p && body.token && p.token === body.token);
     if (back >= 0) return ok(await load(room, back), { token: body.token });   // 새로고침한 본인
+    if (isBotRoom(room)) return bad('AI 와 혼자 하는 방이라 들어갈 수 없어요', 409);
     if (room.players[1]) return bad('이미 두 명이 들어와 있어요', 409);
     const token = crypto.randomUUID();
     room.players[1] = { token, name: cleanName(body.name) };
@@ -108,6 +137,7 @@ export async function handleRoom(game, body, store, now = Date.now()) {
   if (!alive(room, now)) return bad('방이 사라졌어요. 다시 만들어주세요', 404);
   const idx = room.players.findIndex((p) => p && body.token && p.token === body.token);
   if (idx < 0) return bad('이 방의 참가자가 아니에요', 403);
+  await botTurn(room);                              // 봇 방이면 봇이 먼저 (지난 폴링 뒤 할 일)
   const ctx = await load(room, idx);
 
   if (act === 'state') return ok(ctx);
@@ -118,6 +148,7 @@ export async function handleRoom(game, body, store, now = Date.now()) {
     if (!game.finished(ctx)) return bad('아직 끝나지 않았어요');
     room.round++;
     game.setup(room);                              // seeded — 동시에 눌러도 같은 판이 된다
+    if (isBotRoom(room)) room.lastAt = now;
     await store.set(roomKey(code), room);
     return ok(await load(room, idx));
   }
@@ -126,6 +157,7 @@ export async function handleRoom(game, body, store, now = Date.now()) {
   if (!fn) return bad('알 수 없는 요청이에요');
   const err = fn(ctx);
   if (err) return bad(err.error, err.status || 400);
+  if (isBotRoom(room)) { room.lastAt = now; ctx.touchRoom = true; }   // 봇은 이 시각부터 BOT_DELAY 뒤에 움직인다
   if (ctx.touchMe) await store.set(playerKey(code, idx), ctx.me);
   if (ctx.touchRoom) await store.set(roomKey(code), room);
   return ok(ctx);
