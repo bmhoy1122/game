@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#5a1238">
+<title>향신료 시장</title>
+<style>
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;min-height:100%;font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+    color:#4a2236;background:#3b0f28}
+  body{background:radial-gradient(130% 80% at 50% 0%,#ffe3b0 0%,#f4a259 30%,#c2255c 66%,#4a0f30 100%);
+    background-attachment:fixed;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+    display:flex;justify-content:center;overflow-x:hidden;
+    --pk-accent:#c2255c;--pk-soft:#fdeff4;--pk-ink:#6b1840;--pk-mute:#a5587c;--pk-line:#f1cadb}
+  #app{width:100%;max-width:440px;padding:16px 14px 28px;display:flex;flex-direction:column;gap:10px}
+
+  h1{margin:4px 0 0;font-size:27px;letter-spacing:-.5px;color:#fff;text-align:center;text-shadow:0 2px 10px rgba(90,20,40,.4)}
+  .sub{margin:0;text-align:center;color:#ffffffe0;font-size:13px;font-weight:600}
+  .leave{display:block;margin:2px auto 0;width:auto;background:none;color:#fff;opacity:.85;font-size:13px;font-weight:700;padding:6px 12px;text-decoration:underline}
+
+  .card{background:rgba(255,255,255,.95);border-radius:20px;padding:14px;box-shadow:0 10px 30px rgba(90,20,40,.22)}
+  .card h2{margin:0 0 10px;font-size:15px;color:#7a2a50}
+
+  button{font:inherit;font-weight:800;border:0;border-radius:14px;padding:14px 16px;cursor:pointer;
+    touch-action:manipulation;transition:transform .06s,filter .15s,opacity .15s}
+  button:active{transform:scale(.97)}
+  button:disabled{opacity:.4;cursor:default}
+  .primary{background:linear-gradient(135deg,#e8507f,#c2255c);color:#fff;width:100%;font-size:17px;box-shadow:0 6px 16px rgba(194,37,92,.35)}
+  .ghost{background:#fbe6ee;color:#7a2a50;width:100%}
+  .big-rules{background:linear-gradient(135deg,#ffcf6e,#f4a259);color:#5a2a10;width:100%;font-size:17px;box-shadow:0 6px 14px rgba(200,110,30,.3)}
+
+  input{font:inherit;width:100%;padding:14px;border-radius:14px;border:2px solid #f3d3e0;background:#fff;color:#4a2236;font-weight:700;text-align:center}
+  input:focus{outline:0;border-color:#c2255c}
+  #code{letter-spacing:10px;font-size:26px;font-weight:900;padding-left:10px}
+  .codebox{text-align:center;background:linear-gradient(135deg,#fff4f8,#fde2ec);border-radius:16px;padding:14px}
+  .codebox .n{font-size:40px;font-weight:900;letter-spacing:8px;color:#c2255c;padding-left:8px}
+  .codebox .t{font-size:12px;font-weight:700;color:#a5587c}
+
+  /* 카드 */
+  .cd{position:relative;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    font-weight:900;color:#fff;user-select:none;-webkit-user-select:none;cursor:pointer;
+    box-shadow:0 2px 0 rgba(0,0,0,.18),inset 0 0 0 2px rgba(255,255,255,.35);transition:transform .12s,box-shadow .12s}
+  .cd .e{line-height:1}
+  .cd .n{font-size:11px;letter-spacing:-.3px;margin-top:3px;text-shadow:0 1px 2px rgba(0,0,0,.25);white-space:nowrap}
+  .t-d{background:linear-gradient(160deg,#ff6b81,#d6304a)}
+  .t-g{background:linear-gradient(160deg,#ffd54a,#e0a000);color:#5a3a00}
+  .t-g .n{text-shadow:none}
+  .t-s{background:linear-gradient(160deg,#dfe6ee,#9aa8b8);color:#2f3a48}
+  .t-s .n{text-shadow:none}
+  .t-c{background:linear-gradient(160deg,#b57ce8,#7a3fbf)}
+  .t-p{background:linear-gradient(160deg,#5fc96f,#2a8c3c)}
+  .t-l{background:linear-gradient(160deg,#c48a5a,#8a5430)}
+  .t-k{background:linear-gradient(160deg,#f2dcb0,#d4b07a);color:#6a4a20}
+  .t-k .n{text-shadow:none}
+  .cd.sel{transform:translateY(-7px);box-shadow:0 0 0 3px #fff,0 0 0 6px #c2255c,0 8px 14px rgba(0,0,0,.25)}
+  .cd.new{animation:pop .5s ease-out}
+  @keyframes pop{0%{transform:scale(.6);opacity:.3}70%{transform:scale(1.08)}100%{transform:none;opacity:1}}
+  .cd.empty{visibility:hidden}
+
+  #market{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;padding-top:6px}
+  #market .cd{height:86px}
+  #market .cd .e{font-size:30px}
+  #hand{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;min-height:72px;padding-top:8px}
+  #hand .cd{height:66px}
+  #hand .cd .e{font-size:22px}
+  #hand .cd .n{font-size:10px}
+  .label{display:flex;justify-content:space-between;align-items:center;font-size:12.5px;font-weight:800;color:#a5587c}
+  .label b{color:#6b1840;font-size:14px}
+
+  /* 상대 · 나 정보 */
+  .bar{display:flex;align-items:center;gap:8px}
+  .rules-sm{flex:none;width:auto;padding:9px 11px;font-size:13px;border-radius:12px;background:#fde7c4;color:#6a3a10}
+  .opp{flex:1;min-width:0;display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.95);border-radius:16px;padding:9px 12px;
+    box-shadow:0 6px 18px rgba(90,20,40,.18)}
+  .opp.on{box-shadow:0 0 0 3px #ffd36e,0 6px 18px rgba(90,20,40,.18)}
+  .opp .nm{font-weight:900;font-size:14px;color:#6b1840;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1}
+  .stats{display:flex;gap:6px;flex:none}
+  .st{display:flex;align-items:center;gap:2px;background:#fbeef4;border-radius:9px;padding:4px 6px;font-size:12.5px;font-weight:900;color:#6b1840;white-space:nowrap}
+  .st i{font-style:normal;font-size:14px}
+  .back-card{display:inline-block;width:11px;height:15px;border-radius:3px;background:linear-gradient(160deg,#e8507f,#8a1a48);
+    box-shadow:inset 0 0 0 1.5px #ffd1e0;margin-right:2px;vertical-align:-2px}
+
+  /* 상품 토큰 더미 */
+  #piles{display:grid;grid-template-columns:repeat(6,1fr);gap:4px}
+  .pile{background:#fbf3f6;border-radius:10px;padding:5px 2px 4px;text-align:center;min-width:0}
+  .pile .h{font-size:15px;line-height:1.1}
+  .pile .h small{font-size:10px;font-weight:800;color:#a5587c;margin-left:1px}
+  .pile .v{font-size:10.5px;font-weight:800;color:#a5587c;white-space:nowrap;overflow:hidden;letter-spacing:-.4px}
+  .pile .v b{font-size:15px;color:#6b1840;margin-right:1px}
+  .pile.gone{opacity:.45}
+  .pile.gone .v{color:#c0392b}
+  .meta{display:flex;justify-content:space-between;font-size:11.5px;font-weight:800;color:#a5587c;margin-top:6px}
+
+  .last{font-size:13px;font-weight:800;color:#6b1840;background:#fff7e6;border-radius:12px;padding:8px 10px;text-align:center;
+    min-height:34px;margin-top:10px;line-height:1.4}
+  .last.flash{animation:fl 1.2s ease-out}
+  @keyframes fl{0%{background:#ffd36e}100%{background:#fff7e6}}
+  .guide{text-align:center;border-radius:14px;padding:10px;font-weight:800;font-size:14px;line-height:1.4}
+  .guide.me{background:linear-gradient(135deg,#fff3c4,#ffd98a);color:#6a4210}
+  .guide.you{background:#f6e9ef;color:#8a5a72}
+
+  .mine{display:flex;align-items:center;gap:6px;margin-top:10px;flex-wrap:wrap}
+  .herd{flex:none;width:auto;display:flex;align-items:center;gap:4px;padding:7px 10px;border-radius:12px;background:#f7ead2;color:#6a4a20;font-size:14px;
+    box-shadow:inset 0 0 0 2px #e8cf9f}
+  .herd.sel{background:#fff;box-shadow:0 0 0 3px #c2255c}
+  .herd .use{background:#c2255c;color:#fff;border-radius:8px;padding:1px 6px;font-size:11.5px}
+  .mine .sp{flex:1}
+
+  #acts{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:12px}
+  #acts button{padding:12px 2px 10px;font-size:13.5px;border-radius:13px;background:#efe4ea;color:#a8899a;line-height:1.15}
+  #acts button i{display:block;font-style:normal;font-size:20px;margin-bottom:2px}
+  #acts button.on{background:linear-gradient(135deg,#e8507f,#c2255c);color:#fff;box-shadow:0 5px 12px rgba(194,37,92,.35)}
+  .small-link{display:block;margin:10px auto 0;width:auto;background:none;color:#a5587c;font-size:12.5px;padding:4px 10px;text-decoration:underline}
+
+  /* 끝 */
+  .result{text-align:center}
+  .result .big{font-size:28px;font-weight:900;margin:2px 0}
+  .win .big{color:#c2255c} .lose .big{color:#7b5a6a} .draw .big{color:#9a7a2a}
+  table.score{width:100%;border-collapse:collapse;margin:10px 0 4px;font-size:13.5px}
+  table.score th,table.score td{padding:6px 4px;border-bottom:1px solid #f3dbe6;text-align:center}
+  table.score th{font-size:12.5px;color:#a5587c}
+  table.score td:first-child{text-align:left;font-weight:800;color:#6b1840}
+  table.score tr.tot td{font-weight:900;font-size:16px;color:#c2255c;border-bottom:0}
+  table.score small{display:block;font-size:10.5px;color:#a5587c;font-weight:700}
+
+  #err{background:#4a0f30;color:#ffe3ee;border-radius:14px;padding:11px 14px;font-size:13.5px;font-weight:700;text-align:center;
+    position:sticky;top:8px;z-index:20;box-shadow:0 6px 18px rgba(0,0,0,.25)}
+  .hide{display:none!important}
+  .muted{color:#a5587c;font-size:12.5px;font-weight:700;text-align:center;margin:0}
+  .dots::after{content:'';animation:d 1.2s steps(4,end) infinite}
+  @keyframes d{0%{content:''}25%{content:'.'}50%{content:'..'}75%{content:'...'}}
+  a.back{display:block;text-align:center;color:#ffffffd0;font-size:12px;font-weight:700;text-decoration:none;padding:4px}
+</style>
+</head>
+<body>
+<div id="app">
+  <h1>🌶️ 향신료 시장</h1>
+  <p class="sub" id="sub">자이푸르 방식 · 상품을 모아 팔아서 돈을 더 많이 벌면 이겨요</p>
+  <button id="b-leave" class="leave hide">방 나가기</button>
+  <div id="err" class="hide"></div>
+
+  <!-- 1. 시작 -->
+  <section id="s-home" class="card hide">
+    <button class="big-rules" id="b-rules">📖 규칙 보기 (처음이면 꼭!)</button>
+    <h2 style="margin:18px 0 10px">방 만들기</h2>
+    <input id="name" maxlength="8" placeholder="내 이름 (선택)" autocomplete="off">
+    <h2 style="margin:16px 0 8px">누가 먼저 할지</h2>
+    <div id="pick-kind"></div>
+    <div style="height:14px"></div>
+    <button class="primary" id="b-create">새 방 만들기</button>
+    <div style="height:8px"></div>
+    <button class="ghost" id="b-bot">🤖 혼자 하기 (AI 상대)</button>
+    <h2 style="margin-top:22px">코드로 들어가기</h2>
+    <input id="code" inputmode="numeric" maxlength="4" placeholder="0000" autocomplete="off">
+    <div style="height:10px"></div>
+    <button class="ghost" id="b-join">들어가기</button>
+  </section>
+
+  <!-- 2. 대기 -->
+  <section id="s-wait" class="card hide">
+    <div class="codebox">
+      <div class="t">방 코드</div>
+      <div class="n" id="w-code">----</div>
+    </div>
+    <div style="height:10px"></div>
+    <button class="ghost" id="b-share">초대 링크 복사</button>
+    <p class="muted" style="margin-top:14px"><span class="dots">상대를 기다리는 중</span></p>
+    <p class="muted" style="margin:14px 0 10px;font-size:13px">둘 다 방을 만들었다면 한 명은 나가서 상대 코드로 들어가요</p>
+    <button class="ghost" id="b-leave-wait">나가서 다른 코드로 들어가기</button>
+  </section>
+
+  <!-- 3. 선 정하기 -->
+  <section id="s-pick" class="card hide"><div id="picker"></div></section>
+
+  <!-- 4. 게임 -->
+  <section id="s-game" class="hide" style="display:flex;flex-direction:column;gap:10px">
+    <div class="bar">
+      <button class="rules-sm" id="b-rules2">📖 규칙</button>
+      <div class="opp" id="opp">
+        <span class="nm" id="o-name">상대</span>
+        <div class="stats">
+          <span class="st" title="손패"><span class="back-card"></span><span id="o-hand">0</span></span>
+          <span class="st" title="낙타"><i>🐪</i><span id="o-herd">0</span></span>
+          <span class="st" title="상품 토큰 (점수)"><i>🪙</i><span id="o-goods">0</span></span>
+          <span class="st" title="보너스 토큰 (값은 끝날 때 공개)"><i>🎁</i><span id="o-bonus">0</span></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:10px 10px 8px">
+      <div class="label" style="margin-bottom:6px"><span>남은 상품 토큰 — 다음에 팔면 받는 값</span></div>
+      <div id="piles"></div>
+      <div class="meta"><span id="m-deck">덱 40장</span><span id="m-empty">빈 더미 0/3 (3개 비면 끝)</span></div>
+    </div>
+
+    <div class="card" id="c-market">
+      <div class="label"><b>🏪 시장</b><span>탭해서 고르기</span></div>
+      <div id="market"></div>
+      <div class="last" id="last">—</div>
+    </div>
+
+    <div class="result card hide" id="d-box">
+      <div class="big" id="d-big">—</div>
+      <p class="muted" id="d-sub"></p>
+      <table class="score" id="d-table"></table>
+      <p class="muted" id="d-hand" style="margin-bottom:12px"></p>
+      <button class="primary" id="b-again">다시 하기</button>
+    </div>
+
+    <div class="guide you" id="guide">—</div>
+
+    <div class="card" id="c-mine">
+      <div class="label"><b id="me-name">내 손패</b><span id="me-count">0/7장</span></div>
+      <div id="hand"></div>
+      <div class="mine">
+        <button class="herd" id="herd" title="교환에 낙타를 쓰려면 누르세요">🐪 <span id="me-herd">0</span><span class="use hide" id="herd-use"></span></button>
+        <span class="sp"></span>
+        <span class="st" title="상품 토큰 (점수)"><i>🪙</i><span id="me-goods">0</span></span>
+        <span class="st" title="보너스 토큰 (값은 끝날 때 공개)"><i>🎁</i><span id="me-bonus">0</span></span>
+      </div>
+      <div id="acts">
+        <button id="a-take"><i>✋</i>가져오기</button>
+        <button id="a-camels"><i>🐪</i>낙타 전부</button>
+        <button id="a-trade"><i>🔄</i>교환</button>
+        <button id="a-sell"><i>💰</i>팔기</button>
+      </div>
+      <button class="small-link" id="b-resign">기권</button>
+    </div>
+  </section>
+
+  <a class="back" href="../">← 다른 게임</a>
+</div>
+<script src="../couple-common/picker.js"></script>
+<script src="../couple-common/rules.js"></script>
+<script>
+/* =========================================================================
+   향신료 시장 — 자이푸르 방식, 한 라운드짜리.
+   흐름: 대기 → 선 정하기(미니게임) → 번갈아 한 행동씩 → 끝
+   상태는 서버(POST /api/spice)가 들고 있고, 여기는 그리기와 고르기만 한다.
+   규칙은 netlify/lib/spice-core.mjs 가 정답이다. 여기서 막는 건 '왜 안 되는지' 알려주려는 것뿐.
+   카드 DOM 은 한 번만 만들고 내용만 바꾼다 (폴링 때 갈면 탭이 씹힌다).
+   ========================================================================= */
+const API = '/api/spice', SAVE = 'couple-spice', POLL_MS = 1400, POLL_SLOW_MS = 3200;
+const $ = (id) => document.getElementById(id);
+const GOODS = ['d', 'g', 's', 'c', 'p', 'l'], PRECIOUS = ['d', 'g', 's'];
+const EMO = { d: '💎', g: '🥇', s: '🥈', c: '🧣', p: '🌶️', l: '👜', k: '🐪' };
+const NAME = { d: '다이아', g: '금', s: '은', c: '비단', p: '향신료', l: '가죽', k: '낙타' };
+const HAND_MAX = 7;
+const jo = Picker.jo;
+
+let S = { code: null, token: null, you: null, name: '' };
+let st = null;
+let timer = null, busy = false;
+let selM = new Set(), selH = new Set(), selC = 0;   // 고른 시장 카드 · 내 카드 · 쓸 낙타 수
+let selKey = null, lastMoves = -1, prevMarket = null;
+
+/* ------------------------------------------------------------------ 통신 */
+async function api(action, extra) {
+  const body = { action, code: S.code, token: S.token, ...(extra || {}) };
+  let res;
+  try {
+    res = await fetch(API, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  } catch (e) { throw new Error('인터넷이 끊긴 것 같아요'); }
+  let data = {};
+  try { data = await res.json(); } catch (e) {}
+  if (!res.ok) {
+    if (res.status === 404 && !data.error) throw new Error('서버를 찾지 못했어요. 넷리파이에 올린 주소로 열어주세요');
+    throw new Error(data.error || '요청이 실패했어요 (' + res.status + ')');
+  }
+  return data;
+}
+function adopt(data) {
+  if (data.token) S.token = data.token;
+  if (data.code) S.code = data.code;
+  if (typeof data.you === 'number') S.you = data.you;
+  st = data;
+  tellOpener();
+  save();
+  render();
+}
+/* 탕비실(신영 메신저 lounge.html)이 window.open 으로 열었으면 방 코드가 생겼을 때 한 번 알려준다 */
+let toldCode = null;
+function tellOpener() {
+  if (!S.code || toldCode === S.code || !window.opener) return;
+  toldCode = S.code;
+  try { window.opener.postMessage({ type: 'couple-room', game: SAVE.replace('couple-', ''), code: S.code, you: S.you, name: S.name, bot: !!(st && st.bot) }, '*'); } catch (e) {}
+}
+function save() {
+  try { localStorage.setItem(SAVE, JSON.stringify({ code: S.code, token: S.token, name: S.name })); } catch (e) {}
+}
+function forget() {
+  try { localStorage.removeItem(SAVE); } catch (e) {}
+  S = { code: null, token: null, you: null, name: S.name };
+  st = null;
+}
+function err(msg) {
+  const e = $('err');
+  if (!msg) { e.classList.add('hide'); return; }
+  e.textContent = msg; e.classList.remove('hide');
+  clearTimeout(err.t); err.t = setTimeout(() => e.classList.add('hide'), 4200);
+}
+async function act(fn) {
+  if (busy) return;
+  busy = true;
+  try { await fn(); err(null); } catch (e) { err(e.message); } finally { busy = false; }
+}
+
+/* ------------------------------------------------------------------ 폴링 */
+function poll() {
+  clearTimeout(timer);
+  const gap = st && st.phase === 'done' ? POLL_SLOW_MS : POLL_MS;
+  timer = setTimeout(async () => {
+    if (S.code && S.token && document.visibilityState === 'visible' && !busy) {
+      const tok = S.token;   // 기다리는 사이 방을 나갔으면 받은 답을 버린다
+      try { const d = await api('state'); if (S.token === tok) adopt(d); } catch (e) {}
+    }
+    poll();
+  }, gap);
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && S.code) act(async () => adopt(await api('state')));
+});
+
+/* -------------------------------------------------------------- 소리 한 톨 */
+let AC = null;
+function beep(hi) {
+  try {
+    if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)();
+    if (AC.state === 'suspended') AC.resume();
+    const o = AC.createOscillator(), g = AC.createGain(), t = AC.currentTime;
+    o.type = 'triangle';
+    o.frequency.setValueAtTime(hi ? 760 : 480, t);
+    o.frequency.exponentialRampToValueAtTime(hi ? 600 : 380, t + 0.08);
+    g.gain.setValueAtTime(0.07, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
+    o.connect(g); g.connect(AC.destination); o.start(t); o.stop(t + 0.14);
+  } catch (e) {}
+}
+
+/* -------------------------------------------------------------- 규칙 설명 */
+const RULES_HTML = `
+<h3>① 한 줄 요약</h3>
+<p>시장에서 상품 카드를 모아서, <b>같은 종류끼리 한꺼번에 팔아요.</b> 팔 때 받는 토큰 점수를 더 많이 모은 사람이 이겨요.</p>
+
+<h3>② 준비 (저절로 돼요)</h3>
+<ul>
+  <li>카드 55장: 💎다이아 6 · 🥇금 6 · 🥈은 6 · 🧣비단 8 · 🌶️향신료 8 · 👜가죽 10 · 🐪낙타 11</li>
+  <li>가운데 <b>시장</b>에 카드 5장이 펼쳐져요 (처음엔 낙타 3장 + 2장).</li>
+  <li>각자 5장씩 받아요. 받은 카드 중 <b>낙타는 손패가 아니라 내 낙타 무리 🐪</b>로 따로 가요.</li>
+  <li>상대 손패는 장수만 보여요. 낙타 수와 상품 토큰은 다 보여요.</li>
+</ul>
+
+<h3>③ 내 차례 — 아래 넷 중 <u>하나만</u> 해요</h3>
+<ol>
+  <li><b>✋ 가져오기</b> — 시장 상품 <b>1장</b>을 손으로. 손패는 <b>7장까지</b>만 들 수 있어요.</li>
+  <li><b>🐪 낙타 전부</b> — 시장에 있는 낙타를 <b>몽땅</b> 내 무리로. (낙타는 한 장만 골라 올 수 없어요)</li>
+  <li><b>🔄 교환</b> — 시장 상품 <b>2장 이상</b>을 고르고, 같은 수만큼 내 손패나 🐪낙타를 시장에 내려놔요.
+    <br>· 시장 낙타는 교환으로 못 가져와요 · 같은 종류를 주고받을 수 없어요 · 손패 7장 넘으면 안 돼요</li>
+  <li><b>💰 팔기</b> — 손패에서 <b>한 종류</b>를 원하는 만큼 팔아요. 판 장수만큼 그 상품 토큰을 <b>비싼 것부터</b> 받아요.
+    <br>· 💎🥇🥈 비싼 세 가지는 <b>2장 이상</b>이어야 팔 수 있어요
+    <br>· 한 번에 <b>3장 · 4장 · 5장 이상</b> 팔면 🎁<b>보너스 토큰</b>도 하나 받아요</li>
+</ol>
+<p>가져오기 · 낙타 전부를 하면 시장이 빈 만큼 덱에서 채워져서 다시 5장이 돼요.</p>
+<p><b>조작:</b> 카드를 탭해서 고르면 할 수 있는 버튼이 빨갛게 켜져요. 교환에 낙타를 쓰려면 🐪 버튼을 눌러 수를 올려요.</p>
+
+<h3>④ 점수와 끝</h3>
+<table>
+  <tr><th>상품</th><th>토큰 (먼저 팔수록 비쌈)</th></tr>
+  <tr><td>💎 다이아</td><td>7 7 5 5 5</td></tr>
+  <tr><td>🥇 금</td><td>6 6 5 5 5</td></tr>
+  <tr><td>🥈 은</td><td>5 5 5 5 5</td></tr>
+  <tr><td>🧣 비단</td><td>5 3 3 2 2 1 1</td></tr>
+  <tr><td>🌶️ 향신료</td><td>5 3 3 2 2 1 1</td></tr>
+  <tr><td>👜 가죽</td><td>4 3 2 1 1 1 1 1 1</td></tr>
+</table>
+<table>
+  <tr><th>한 번에 판 장수</th><th>🎁 보너스 (값은 끝날 때 공개)</th></tr>
+  <tr><td>3장</td><td>1~3점</td></tr>
+  <tr><td>4장</td><td>4~6점</td></tr>
+  <tr><td>5장 이상</td><td>8~10점</td></tr>
+</table>
+<ul>
+  <li><b>끝나는 때:</b> 상품 토큰 더미가 <b>3종류 비거나</b>, 시장을 채워야 하는데 <b>덱이 모자랄 때</b>.</li>
+  <li><b>점수</b> = 상품 토큰 + 보너스 토큰 + <b>낙타가 더 많은 사람 5점</b> (같으면 아무도 없음).</li>
+  <li>점수가 같으면 보너스 토큰이 많은 쪽, 그래도 같으면 상품 토큰이 많은 쪽이 이겨요.</li>
+  <li>내가 받은 보너스 토큰도 끝날 때까지 값은 비밀이에요 (개수만 보여요).</li>
+</ul>
+
+<h3>⑤ 예시</h3>
+<div class="rl-ex">손에 🧣비단 3장이 있어요. 비단 3장을 탭하고 <b>💰팔기</b> → 비단 토큰 5+3+3 = <b>11점</b>, 3장이라 🎁보너스 1개도 받아요.
+  다음 사람이 비단을 팔면 남은 2, 2, 1… 부터 받아요.</div>
+<div class="rl-ex">시장에 💎💎 이 있고 손엔 👜가죽 1장, 🐪 낙타 3마리. 시장 💎 두 장을 탭하고, 손의 👜 와 🐪 버튼(1)을 골라 <b>🔄교환</b> →
+  💎 2장이 내 손에, 👜 와 🐪 가 시장으로 가요. 한 번에 두 장을 가져오는 방법이에요.</div>
+
+<h3>⑥ 초보 팁</h3>
+<div class="rl-tip">비싼 상품(💎🥇🥈)은 먼저 파는 사람이 7·6점을 가져가요. 2장 모이면 빨리 파는 게 좋아요.</div>
+<div class="rl-tip">싼 상품은 3장 이상 모아 팔아야 보너스를 받아요. 1~2장씩 팔면 손해예요.</div>
+<div class="rl-tip">낙타는 교환할 때 쓰는 '돈'이에요. 하지만 낙타를 가져가면 시장에 새 카드가 깔려서 상대에게 좋은 카드가 갈 수도 있어요.</div>`;
+const rules = Rules.mount({ title: '🌶️ 향신료 시장 규칙', html: RULES_HTML, buttons: [$('b-rules'), $('b-rules2')], autoKey: SAVE });
+
+/* -------------------------------------------------------------- 카드 (한 번만 만든다) */
+function makeCard(parent, onTap) {
+  const d = document.createElement('div');
+  d.className = 'cd empty';
+  d.innerHTML = '<span class="e"></span><span class="n"></span>';
+  d.addEventListener('click', onTap);
+  parent.appendChild(d);
+  return d;
+}
+function paintCard(d, t, sel) {
+  const want = 'cd t-' + t + (sel ? ' sel' : '');
+  if (d.dataset.t !== t) { d.querySelector('.e').textContent = EMO[t]; d.querySelector('.n').textContent = NAME[t]; d.dataset.t = t; }
+  const keepNew = d.classList.contains('new');
+  d.className = want + (keepNew ? ' new' : '');
+}
+const mCards = [...Array(5)].map((_, i) => makeCard($('market'), () => tapMarket(i)));
+const hCards = [...Array(HAND_MAX)].map((_, i) => makeCard($('hand'), () => tapHand(i)));
+const piles = {};
+GOODS.forEach((t) => {
+  const p = document.createElement('div');
+  p.className = 'pile';
+  p.innerHTML = '<div class="h">' + EMO[t] + '<small></small></div><div class="v"></div>';
+  p.addEventListener('click', () => {
+    const v = st && st.tokens ? st.tokens[t] : [];
+    err(EMO[t] + ' ' + NAME[t] + ' 토큰 ' + (v.length ? v.length + '개 남음: ' + v.join(' · ') : '다 팔렸어요'));
+  });
+  $('piles').appendChild(p);
+  piles[t] = p;
+});
+
+/* -------------------------------------------------------------- 고르기 */
+const myTurn = () => st && st.phase === 'play' && st.yourTurn;
+function tapMarket(i) {
+  if (!myTurn()) { err(st && st.phase === 'play' ? '상대 차례예요. 기다려 주세요' : '지금은 고를 수 없어요'); return; }
+  const t = st.market[i];
+  if (t === 'k') {
+    // 낙타는 한꺼번에 — 낙타 하나를 누르면 시장 낙타 전부가 골라진다
+    const camelIdx = st.market.map((x, k) => (x === 'k' ? k : -1)).filter((k) => k >= 0);
+    const on = selM.has(i);
+    selM.clear(); selH.clear(); selC = 0;
+    if (!on) camelIdx.forEach((k) => selM.add(k));
+  } else {
+    [...selM].forEach((k) => { if (st.market[k] === 'k') selM.delete(k); });
+    selM.has(i) ? selM.delete(i) : selM.add(i);
+  }
+  beep(false); drawSelection();
+}
+function tapHand(i) {
+  if (!myTurn()) { err(st && st.phase === 'play' ? '상대 차례예요. 기다려 주세요' : '지금은 고를 수 없어요'); return; }
+  if (i >= st.hand.length) return;
+  [...selM].forEach((k) => { if (st.market[k] === 'k') selM.delete(k); });
+  selH.has(i) ? selH.delete(i) : selH.add(i);
+  beep(false); drawSelection();
+}
+$('herd').onclick = () => {
+  if (!myTurn()) { err(st && st.phase === 'play' ? '상대 차례예요. 기다려 주세요' : '지금은 고를 수 없어요'); return; }
+  if (!st.herd) { err('내 낙타가 없어요. 시장 낙타를 가져오면 생겨요'); return; }
+  [...selM].forEach((k) => { if (st.market[k] === 'k') selM.delete(k); });
+  selC = (selC + 1) % (st.herd + 1);
+  if (selC === 1 && selM.size < 2) err('🐪 낙타는 교환할 때 내 카드 대신 내요. 시장 상품을 2장 이상 골라요');
+  beep(false); drawSelection();
+};
+
+/* 지금 고른 것으로 각 행동이 되나 — 되면 null, 안 되면 이유 */
+function pickInfo() {
+  const mi = [...selM], hi = [...selH];
+  const mT = mi.map((i) => st.market[i]), hT = hi.map((i) => st.hand[i]);
+  return { mi, hi, mT, hT, mGoods: mT.filter((t) => t !== 'k').length, mCamel: mT.includes('k') };
+}
+function why(kind) {
+  if (!st || st.phase !== 'play') return '지금은 할 수 없어요';
+  if (!st.yourTurn) return '상대 차례예요. 기다려 주세요';
+  const p = pickInfo();
+  const marketCamels = st.market.filter((t) => t === 'k').length;
+  if (kind === 'camels') return marketCamels ? null : '시장에 낙타가 없어요';
+  if (kind === 'take') {
+    if (p.mCamel) return '낙타는 "낙타 전부"로 한꺼번에 가져와요';
+    if (!p.mi.length) return '시장에서 가져올 상품 1장을 먼저 탭해요';
+    if (p.mi.length > 1) return '가져오기는 1장만이에요. 여러 장은 내 카드를 같이 골라 "교환"해요';
+    if (p.hi.length || selC) return '가져오기는 시장 카드 1장만 골라요 (내 카드 · 낙타 선택을 풀어요)';
+    if (st.hand.length >= HAND_MAX) return '손패가 7장이라 더 못 가져와요. 먼저 팔거나 교환해요';
+    return null;
+  }
+  if (kind === 'trade') {
+    if (p.mCamel) return '시장 낙타는 교환으로 못 가져와요';
+    if (p.mi.length < 2) return '교환은 시장 상품을 2장 이상 골라요 (1장은 "가져오기")';
+    const give = p.hi.length + selC;
+    if (give !== p.mi.length) return '시장에서 ' + p.mi.length + '장 골랐어요. 내 카드나 🐪낙타를 ' + p.mi.length + '장 골라요 (지금 ' + give + '장)';
+    const same = p.mT.find((t) => p.hT.includes(t));
+    if (same) return '같은 종류(' + NAME[same] + ')는 주고받을 수 없어요';
+    if (st.hand.length - p.hi.length + p.mi.length > HAND_MAX) return '바꾸면 손패가 7장을 넘어요. 손패 대신 🐪낙타를 더 써요';
+    return null;
+  }
+  if (kind === 'sell') {
+    if (!p.hi.length) return '팔 카드를 내 손패에서 탭해요 (같은 종류끼리)';
+    if (p.mi.length || selC) return '팔기는 내 손패만 골라요 (시장 · 낙타 선택을 풀어요)';
+    const t = p.hT[0];
+    if (p.hT.some((x) => x !== t)) return '한 번에 한 종류만 팔 수 있어요';
+    if (PRECIOUS.includes(t) && p.hi.length < 2) return NAME[t] + '는 비싸서 2장 이상 모아야 팔 수 있어요';
+    return null;
+  }
+  return '알 수 없는 행동이에요';
+}
+/* 팔면 받는 것 */
+function sellPreview(t, n) {
+  const v = (st.tokens[t] || []).slice(0, n);
+  const bk = n >= 5 ? 5 : n === 4 ? 4 : n === 3 ? 3 : 0;
+  const bonus = bk && st.bonusLeft[bk] > 0;
+  return { sum: v.reduce((a, x) => a + x, 0), vals: v, bonus };
+}
+function guideText() {
+  if (!st.yourTurn) return '<span class="dots">' + esc(jo(youName(), '이', '가')) + ' 고르는 중</span>';
+  const p = pickInfo();
+  if (p.mCamel) return '🐪 낙타 ' + p.mi.length + '마리 → <b>낙타 전부</b>를 눌러요';
+  if (!p.mi.length && !p.hi.length && !selC) {
+    return st.hand.length >= HAND_MAX
+      ? '손패가 꽉 찼어요 → 내 카드를 탭해 <b>팔거나</b>, 시장 카드와 <b>교환</b>해요'
+      : '시장 카드를 탭해 <b>가져오거나</b> · 내 카드를 탭해 <b>팔아요</b>';
+  }
+  if (!why('sell')) {
+    const t = p.hT[0], pv = sellPreview(t, p.hi.length);
+    return EMO[t] + ' ' + NAME[t] + ' ' + p.hi.length + '장 팔면 <b>+' + pv.sum + '점</b>' + (pv.vals.length < p.hi.length ? ' (토큰 ' + pv.vals.length + '개뿐)' : '') + (pv.bonus ? ' + 🎁보너스' : '') + ' → <b>팔기</b>';
+  }
+  if (!why('take')) return EMO[p.mT[0]] + ' ' + NAME[p.mT[0]] + ' 1장 → <b>가져오기</b> · 더 고르면 교환';
+  if (!why('trade')) return '🔄 시장 ' + p.mi.length + '장 ↔ 내 ' + (p.hi.length ? p.hi.length + '장' : '') + (p.hi.length && selC ? ' + ' : '') + (selC ? '🐪' + selC : '') + ' → <b>교환</b>';
+  if (p.mi.length >= 2) return why('trade');
+  if (p.hi.length && p.mi.length) return '교환하려면 시장 상품을 2장 이상 골라요';
+  if (p.hi.length) return why('sell');
+  return why('take');
+}
+function drawSelection() {
+  if (!st || !st.market) return;
+  st.market.forEach((t, i) => paintCard(mCards[i], t, selM.has(i)));
+  for (let i = st.market.length; i < 5; i++) mCards[i].className = 'cd empty';
+  hCards.forEach((d, i) => { if (i < st.hand.length) paintCard(d, st.hand[i], selH.has(i)); else { d.className = 'cd empty'; d.dataset.t = ''; } });
+  $('herd').classList.toggle('sel', selC > 0);
+  $('herd-use').classList.toggle('hide', !selC);
+  $('herd-use').textContent = '교환에 ' + selC;
+  for (const k of ['take', 'camels', 'trade', 'sell']) $('a-' + k).classList.toggle('on', !why(k));
+  const g = $('guide');
+  if (st.phase === 'play') {
+    g.classList.remove('hide');
+    g.className = 'guide ' + (st.yourTurn ? 'me' : 'you');
+    g.innerHTML = guideText();
+  } else g.classList.add('hide');
+}
+
+/* -------------------------------------------------------------- 행동 */
+function doAct(kind) {
+  const w = why(kind);
+  if (w) { err(w); return; }
+  const p = pickInfo();
+  let body;
+  if (kind === 'take') body = { card: p.mi[0] };
+  else if (kind === 'camels') body = {};
+  else if (kind === 'trade') body = { take: p.mi, give: p.hi, camels: selC };
+  else body = { type: p.hT[0], n: p.hi.length };
+  act(async () => { beep(true); const d = await api(kind, body); clearSel(); adopt(d); });
+}
+['take', 'camels', 'trade', 'sell'].forEach((k) => ($('a-' + k).onclick = () => doAct(k)));
+function clearSel() { selM.clear(); selH.clear(); selC = 0; }
+
+/* -------------------------------------------------------------- 선 정하기 */
+const chooser = Picker.chooser($('pick-kind'));
+const ackKey = () => SAVE + ':pick:' + st.code + ':' + st.round;
+const acked = () => { try { return sessionStorage.getItem(ackKey()) === '1'; } catch (e) { return false; } };
+const picker = Picker.mount($('picker'), {
+  onThrow: (v) => act(async () => { beep(false); adopt(await api('throw', { value: v })); }),
+  onDone: () => { try { sessionStorage.setItem(ackKey(), '1'); } catch (e) {} render(); },
+});
+
+/* ------------------------------------------------------------------ 그리기 */
+function show(id) {
+  ['s-home', 's-wait', 's-pick', 's-game'].forEach((s) => $(s).classList.toggle('hide', s !== id));
+  $('b-leave').classList.toggle('hide', id === 's-home');
+}
+const meName = () => (st && st.name) || S.name || '나';
+const youName = () => (st && st.opponent.name) || '상대';
+const emos = (arr) => arr.map((t) => EMO[t]).join('');
+function lastText(l) {
+  if (!l) return st.yourTurn ? '내가 먼저 해요. 시작!' : esc(jo(youName(), '이', '가')) + ' 먼저 해요';
+  const mine = l.by === S.you;
+  const who = mine ? '내가' : esc(jo(youName(), '이', '가'));
+  if (l.kind === 'take') return who + ' ' + EMO[l.type] + ' ' + NAME[l.type] + ' 1장 가져갔어요';
+  if (l.kind === 'camels') return who + ' 🐪 낙타 ' + l.n + '마리 가져갔어요';
+  if (l.kind === 'trade') return who + ' ' + emos(l.gave) + ' 내고 ' + emos(l.got) + ' 가져갔어요';
+  if (l.kind === 'sell') return who + ' ' + EMO[l.type] + ' ' + NAME[l.type] + ' ' + l.n + '장 팔았어요 <b>+' + l.gain + '</b>' + (l.bonus ? ' · 🎁 보너스 1개' : '');
+  return '';
+}
+function drawPiles() {
+  for (const t of GOODS) {
+    const v = st.tokens[t], p = piles[t];
+    p.classList.toggle('gone', !v.length);
+    p.querySelector('small').textContent = v.length ? '×' + v.length : '';
+    p.querySelector('.v').innerHTML = v.length ? '<b>' + v[0] + '</b>' + v.slice(1, 4).join(' ') + (v.length > 4 ? '…' : '') : '끝';
+  }
+  $('m-deck').textContent = '덱 ' + st.deck + '장';
+  $('m-empty').textContent = '빈 더미 ' + st.emptyPiles + '/3 (3개 비면 끝)';
+}
+const REASON = { tokens: '상품 토큰 더미 3개가 비어서 끝났어요', deck: '덱이 떨어져서 끝났어요' };
+function drawDone() {
+  const kind = st.winner === 'draw' ? 'draw' : st.winner === S.you ? 'win' : 'lose';
+  $('d-box').className = 'result card ' + kind;
+  $('d-big').textContent = kind === 'win' ? '🎉 이겼어요!' : kind === 'lose' ? '졌어요…' : '비겼어요!';
+  if (st.reason === 'resign') {
+    $('d-sub').textContent = kind === 'win' ? jo(youName(), '이', '가') + ' 기권했어요' : '기권했어요';
+  } else {
+    const f = st.final;
+    let tie = '';
+    if (f && f.me.total === f.opp.total) tie = f.me.bonusN !== f.opp.bonusN ? ' · 점수가 같아서 보너스 토큰 개수로 정했어요' : f.me.goodsN !== f.opp.goodsN ? ' · 점수가 같아서 상품 토큰 개수로 정했어요' : '';
+    $('d-sub').textContent = (REASON[st.reason] || '') + tie;
+  }
+  const f = st.final;
+  if (f) {
+    const bl = (a) => (a.length ? '<small>' + a.join('+') + '</small>' : '');
+    $('d-table').innerHTML =
+      '<tr><th></th><th>' + esc(meName()) + '</th><th>' + esc(youName()) + '</th></tr>' +
+      '<tr><td>🪙 상품 토큰</td><td>' + f.me.goods + '<small>' + f.me.goodsN + '개</small></td><td>' + f.opp.goods + '<small>' + f.opp.goodsN + '개</small></td></tr>' +
+      '<tr><td>🎁 보너스</td><td>' + f.me.bonus + bl(f.myBonus) + '</td><td>' + f.opp.bonus + bl(f.oppBonus) + '</td></tr>' +
+      '<tr><td>🐪 낙타 최다</td><td>' + f.me.camel + '<small>' + st.herd + '마리</small></td><td>' + f.opp.camel + '<small>' + st.opp.herd + '마리</small></td></tr>' +
+      '<tr class="tot"><td>합계</td><td>' + f.me.total + '</td><td>' + f.opp.total + '</td></tr>';
+    $('d-hand').textContent = st.oppHand && st.oppHand.length ? youName() + '의 남은 손패: ' + emos(st.oppHand) : '';
+  }
+}
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+
+function render() {
+  if (!st) { show('s-home'); $('sub').textContent = '자이푸르 방식 · 상품을 모아 팔아서 돈을 더 많이 벌면 이겨요'; return; }
+
+  if (st.phase === 'wait') {
+    show('s-wait');
+    $('sub').textContent = '방 코드를 알려주고 같이 들어와요';
+    $('w-code').textContent = st.code;
+    return;
+  }
+
+  if (st.phase === 'pick' || (st.phase === 'play' && !st.moves && !acked())) {
+    show('s-pick');
+    $('sub').textContent = '방 ' + st.code + ' · 누가 먼저 할까요';
+    picker.update(st.pick, { you: S.you, meName: meName(), youName: youName(), round: st.round,
+      extra: (meFirst) => (meFirst ? '내가 먼저 시장에서 골라요' : jo(youName(), '이', '가') + ' 먼저 골라요') });
+    return;
+  }
+
+  show('s-game');
+  $('sub').textContent = '방 ' + st.code + ' · ' + meName() + ' vs ' + youName();
+
+  // 판이 바뀌었으면 고른 것을 푼다
+  const key = st.round + ':' + st.moves + ':' + st.phase;
+  if (key !== selKey) {
+    selKey = key; clearSel();
+    // 새로 깔린 시장 카드 반짝
+    if (prevMarket && prevMarket.round === st.round) {
+      st.market.forEach((t, i) => { if (prevMarket.m[i] !== t) { const d = mCards[i]; d.classList.remove('new'); void d.offsetWidth; d.classList.add('new'); setTimeout(() => d.classList.remove('new'), 600); } });
+    }
+    prevMarket = { round: st.round, m: st.market.slice() };
+    if (lastMoves >= 0 && st.moves > lastMoves) {
+      const l = $('last'); l.classList.remove('flash'); void l.offsetWidth; l.classList.add('flash');
+      if (st.yourTurn) beep(false);   // 상대가 했다
+    }
+    lastMoves = st.moves;
+  }
+
+  $('o-name').textContent = youName();
+  $('o-hand').textContent = st.opp.hand;
+  $('o-herd').textContent = st.opp.herd;
+  $('o-goods').textContent = st.opp.goodsSum;
+  $('o-bonus').textContent = st.opp.bonus;
+  $('opp').classList.toggle('on', st.phase === 'play' && !st.yourTurn);
+  $('me-name').textContent = meName() + '의 손패';
+  $('me-count').textContent = st.hand.length + '/7장';
+  $('me-herd').textContent = st.herd;
+  $('me-goods').textContent = st.me.goodsSum;
+  $('me-bonus').textContent = st.me.bonus;
+  $('last').innerHTML = lastText(st.last);
+  drawPiles();
+
+  const play = st.phase === 'play';
+  $('acts').classList.toggle('hide', !play);
+  $('b-resign').classList.toggle('hide', !play);
+  $('d-box').classList.toggle('hide', play);
+  if (!play) drawDone();
+  drawSelection();
+}
+
+/* ------------------------------------------------------------------ 버튼 */
+$('b-resign').onclick = () => {
+  if (!confirm('정말 기권할까요?')) return;
+  act(async () => adopt(await api('resign')));
+};
+const createRoom = (bot) => act(async () => {
+  S.name = $('name').value.trim();
+  adopt(await api('create', { name: S.name, pick: chooser.get(), bot: !!bot }));
+  poll();
+});
+$('b-create').onclick = () => createRoom(false);
+$('b-bot').onclick = () => createRoom(true);     // 혼자 하기 — 서버가 1번 자리에 AI 를 앉힌다
+$('b-join').onclick = () => act(async () => {
+  const c = $('code').value.trim();
+  if (!/^\d{4}$/.test(c)) throw new Error('네 자리 숫자를 넣어주세요');
+  S.name = $('name').value.trim();
+  S.code = c;
+  adopt(await api('join', { code: c, name: S.name }));
+  poll();
+});
+$('b-again').onclick = () => act(async () => { clearSel(); prevMarket = null; lastMoves = -1; adopt(await api('restart', { round: st.round })); });
+$('b-share').onclick = async () => {
+  const url = location.origin + location.pathname + '?code=' + st.code;
+  const text = '향신료 시장 한 판! 방 코드 ' + st.code + '\n' + url;
+  try {
+    if (navigator.share) { await navigator.share({ title: '향신료 시장', text: '방 코드 ' + st.code, url }); return; }
+    await navigator.clipboard.writeText(text);
+    $('b-share').textContent = '복사했어요 ✓';
+    setTimeout(() => ($('b-share').textContent = '초대 링크 복사'), 1800);
+  } catch (e) { err('복사가 안 돼요. 방 코드 ' + st.code + ' 를 알려주세요'); }
+};
+['name', 'code'].forEach((id) => $(id).addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') $(id === 'code' ? 'b-join' : 'b-create').click();
+}));
+
+/* 방 나가기 — 방은 그대로 두고(12시간 뒤 만료) 이 폰에서만 잊는다 */
+function leave() {
+  if (st && st.phase !== 'wait' && st.phase !== 'done' && !confirm('방에서 나갈까요?\n하던 판은 여기서 끝나요')) return;
+  clearTimeout(timer);
+  forget(); clearSel(); selKey = null; lastMoves = -1; prevMarket = null;
+  history.replaceState(null, '', location.pathname);
+  $('code').value = '';
+  render();
+  $('code').focus();
+}
+$('b-leave').onclick = leave;
+$('b-leave-wait').onclick = leave;
+
+/* ------------------------------------------------------------------ 시작 */
+(async function boot() {
+  show('s-home');
+  const urlCode = new URLSearchParams(location.search).get('code');
+  let saved = null;
+  try { saved = JSON.parse(localStorage.getItem(SAVE) || 'null'); } catch (e) {}
+  if (saved && saved.name) { S.name = saved.name; $('name').value = saved.name; }
+  const urlName = (new URLSearchParams(location.search).get('name') || '').trim().slice(0, 8);
+  if (urlName && !$('name').value) { S.name = urlName; $('name').value = urlName; }   // 탕비실 등에서 이름을 넘겨준 경우
+
+  if (saved && saved.code && saved.token && (!urlCode || urlCode === saved.code)) {
+    S.code = saved.code; S.token = saved.token;
+    try { adopt(await api('state')); poll(); return; } catch (e) { forget(); }
+  }
+  if (new URLSearchParams(location.search).get('bot') === '1') {   // 탕비실 '혼자 하기' — 바로 AI 방을 만든다
+    history.replaceState(null, '', location.pathname);
+    render();
+    createRoom(true);
+    return;
+  }
+  if (urlCode && /^\d{4}$/.test(urlCode)) {
+    $('code').value = urlCode;
+    $('sub').textContent = '초대받은 방 ' + urlCode + ' · 이름을 넣고 들어가요';
+  }
+  render();
+})();
+</script>
+</body>
+</html>

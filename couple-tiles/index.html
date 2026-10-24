@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#123a35">
+<title>비밀 타일</title>
+<style>
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;min-height:100%;font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+    color:#1d3f39;background:#123a35}
+  body{background:radial-gradient(130% 80% at 50% 0%,#dff5ec 0%,#9fd3c2 34%,#3f8f7f 68%,#123a35 100%);
+    background-attachment:fixed;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+    display:flex;justify-content:center;
+    --pk-accent:#1f8a74;--pk-soft:#e8f5f1;--pk-ink:#1d4d44;--pk-mute:#5f8b82;--pk-line:#cfe5de}
+  #app{width:100%;max-width:440px;padding:18px 14px 28px;display:flex;flex-direction:column;gap:12px}
+
+  h1{margin:4px 0 0;font-size:27px;letter-spacing:-.5px;color:#fff;text-align:center;
+    text-shadow:0 2px 10px rgba(10,50,40,.35)}
+  .sub{margin:0;text-align:center;color:#ffffffe0;font-size:13px;font-weight:600;text-shadow:0 1px 4px rgba(10,50,40,.3)}
+  .leave{display:block;margin:6px auto 0;width:auto;background:none;color:#fff;opacity:.9;font-size:13px;font-weight:700;padding:6px 12px;text-decoration:underline}
+
+  .card{background:rgba(255,255,255,.95);border-radius:20px;padding:14px;
+    box-shadow:0 10px 30px rgba(10,50,40,.22)}
+  .card h2{margin:0 0 10px;font-size:15px;color:#2a6a5c}
+
+  button{font:inherit;font-weight:800;border:0;border-radius:14px;padding:14px 16px;cursor:pointer;
+    touch-action:manipulation;transition:transform .06s,filter .15s;color:inherit}
+  button:active:not(:disabled){transform:scale(.97)}
+  button:disabled{opacity:.4;cursor:default}
+  .primary{background:linear-gradient(135deg,#2fae92,#1f8a74);color:#fff;width:100%;font-size:17px;
+    box-shadow:0 6px 16px rgba(31,138,116,.35)}
+  .ghost{background:#e5f3ee;color:#24604f;width:100%}
+  .rules-big{background:#fff6dc;color:#7a5a12;width:100%;font-size:16px;box-shadow:inset 0 0 0 2px #f3d27a}
+  .row{display:flex;gap:10px}
+  .row>*{flex:1}
+
+  input{font:inherit;width:100%;padding:14px;border-radius:14px;border:2px solid #d3e9e1;
+    background:#fff;color:#1d3f39;font-weight:700;text-align:center}
+  input:focus{outline:0;border-color:#1f8a74}
+  #code{letter-spacing:10px;font-size:26px;font-weight:900;padding-left:10px}
+
+  .codebox{text-align:center;background:linear-gradient(135deg,#effaf6,#dcf1ea);border-radius:16px;padding:14px}
+  .codebox .n{font-size:40px;font-weight:900;letter-spacing:8px;color:#1f8a74;padding-left:8px}
+  .codebox .t{font-size:12px;font-weight:700;color:#5f8b82}
+
+  /* 위쪽 줄: 이름 · 규칙 · 도움 */
+  .topbar{display:flex;gap:6px;align-items:center;margin-bottom:8px}
+  .topbar .sp{flex:1}
+  .chip{padding:7px 10px;border-radius:11px;font-size:12.5px;background:#eef6f3;color:#2a6a5c;white-space:nowrap}
+  .chip.on{background:#fff3cf;color:#7a5a12;box-shadow:inset 0 0 0 1.5px #f0c75a}
+  .who{display:flex;gap:8px}
+  .who>div{flex:1;min-width:0;background:#f1f8f5;border-radius:13px;padding:8px 6px;text-align:center}
+  .who>div.on{background:#fff4d2;box-shadow:inset 0 0 0 2px #f0c060}
+  .who b{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#1d4d44}
+  .who small{display:block;font-size:11.5px;font-weight:700;color:#5f8b82}
+
+  .guide{margin-top:8px;border-radius:13px;padding:10px 12px;font-weight:800;font-size:14.5px;text-align:center;line-height:1.4;word-break:keep-all}
+  .guide.me{background:linear-gradient(135deg,#fff3c4,#ffd98a);color:#6b4a10}
+  .guide.you{background:#ecf3f0;color:#557a71}
+  .flash{margin-top:6px;border-radius:11px;padding:7px 10px;font-weight:800;font-size:13px;text-align:center;line-height:1.4;word-break:keep-all}
+  .flash.ok{background:#e3f6e8;color:#25683a}
+  .flash.no{background:#fde8e6;color:#9a3328}
+  .flash.info{background:#f1f5f4;color:#5b726c}
+
+  /* 타일 */
+  .lane-h{display:flex;align-items:baseline;gap:6px;margin:0 2px 8px;font-size:13px;font-weight:800;color:#2a6a5c}
+  .lane-h span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+  .lane-h small{margin-left:auto;font-size:11.5px;color:#7a9a92;font-weight:700;white-space:nowrap}
+  .lane{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;min-height:62px}
+  .tile{position:relative;width:40px;height:58px;padding:0;border-radius:9px;font-size:23px;font-weight:900;
+    display:flex;align-items:center;justify-content:center;flex:none;line-height:1}
+  .tile.b{background:linear-gradient(#3a3d52,#16172a);color:#fff;box-shadow:0 3px 0 #05060e}
+  .tile.w{background:linear-gradient(#ffffff,#ebe7db);color:#222433;box-shadow:inset 0 0 0 1.5px #cbc5b3,0 3px 0 #b0a98f}
+  .tile.q.b{color:#8d90aa}
+  .tile.q.w{color:#a9a390}
+  .tile.sel{transform:translateY(-6px);outline:3px solid #f3b73f;outline-offset:2px}
+  .tile.open-opp{outline:2px solid #3fbf8f;outline-offset:1px}
+  .tile .eye{position:absolute;top:-7px;right:-6px;font-size:12px;background:#ff8a6b;color:#fff;border-radius:8px;padding:1px 3px;
+    line-height:1.1;font-weight:900;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+  .tile .cn{position:absolute;bottom:-15px;left:0;right:0;font-size:10px;font-weight:800;color:#6f8f87;text-align:center;line-height:1}
+  .tile.new{animation:pop .9s ease-out 2}
+  @keyframes pop{0%{transform:scale(1)}40%{transform:scale(1.18)}100%{transform:scale(1)}}
+  .lane.cand{row-gap:20px;padding-bottom:12px}
+  .legend{font-size:11.5px;font-weight:700;color:#7a9a92;text-align:center;margin-top:8px}
+  .legend i{font-style:normal;background:#ff8a6b;color:#fff;border-radius:6px;padding:0 3px;font-size:10.5px}
+
+  /* 가운데: 더미 · 가져온 타일 */
+  .mid{display:flex;gap:10px;align-items:stretch;margin:12px 0}
+  .piles{flex:1.25;display:flex;gap:8px}
+  .pile{flex:1;border-radius:14px;padding:8px 4px;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:12px}
+  .pile .stack{width:32px;height:44px;border-radius:7px;position:relative}
+  .pile.b{background:#e9eaf1;color:#2c2e44}
+  .pile.w{background:#f7f5ee;color:#5a553f}
+  .pile.b .stack{background:linear-gradient(#3a3d52,#16172a);box-shadow:3px -3px 0 #55586f,6px -6px 0 #6d7088}
+  .pile.w .stack{background:linear-gradient(#fff,#ebe7db);box-shadow:inset 0 0 0 1.5px #cbc5b3,3px -3px 0 #ddd8c6,6px -6px 0 #cfc9b4}
+  .pile.go{box-shadow:inset 0 0 0 3px #f3b73f;animation:glow 1.4s ease-in-out infinite}
+  @keyframes glow{50%{box-shadow:inset 0 0 0 3px #ffd98a}}
+  .drawn{flex:1;border-radius:14px;background:#f3f8f6;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+    font-size:11.5px;font-weight:800;color:#5f8b82;text-align:center;padding:6px 4px;line-height:1.3;word-break:keep-all}
+  .drawn .slot{width:40px;height:58px;border-radius:9px;border:2px dashed #c3ddd5}
+
+  /* 숫자판 */
+  .pad-h{font-size:13px;font-weight:800;color:#2a6a5c;text-align:center;margin:4px 0 8px;word-break:keep-all}
+  .pad{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
+  .pad button{padding:0;height:46px;font-size:21px;border-radius:11px;position:relative}
+  .pad.b button{background:linear-gradient(#3a3d52,#1e2034);color:#fff}
+  .pad.w button{background:linear-gradient(#fff,#efebe0);color:#222433;box-shadow:inset 0 0 0 1.5px #cbc5b3}
+  .pad.none button{background:#eef3f1;color:#9db3ad}
+  .pad button.on{outline:3px solid #f3b73f;outline-offset:1px;transform:translateY(-2px)}
+  .pad button.nope{opacity:.28}
+  .pad button.wrong{opacity:.22}
+  .pad button.wrong::after{content:'✕';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#e0503c;font-size:30px;opacity:1}
+  .act{margin-top:10px}
+
+  .log{display:flex;flex-direction:column;gap:5px;font-size:12.5px;font-weight:700;color:#4c6a63}
+  .log div{background:#f4f8f7;border-radius:10px;padding:6px 9px;line-height:1.45;word-break:keep-all}
+  .mt{display:inline-block;min-width:17px;height:21px;padding:0 3px;border-radius:5px;font-size:12px;font-weight:900;line-height:21px;text-align:center;vertical-align:1px}
+  .mt.b{background:#26283d;color:#fff}
+  .mt.w{background:#fff;color:#222433;box-shadow:inset 0 0 0 1px #c9c3b0}
+
+  .result{text-align:center;margin-bottom:6px}
+  .result .big{font-size:28px;font-weight:900;margin:2px 0}
+  .win .big{color:#1f8a74} .lose .big{color:#6e7f7a}
+
+  #err{background:#173f37;color:#e3fff6;border-radius:14px;padding:11px 14px;font-size:13px;
+    font-weight:700;text-align:center;position:sticky;top:6px;z-index:5}
+  .hide{display:none!important}
+  .muted{color:#5f8b82;font-size:12.5px;font-weight:700;text-align:center;margin:0;word-break:keep-all}
+  .dots::after{content:'';animation:d 1.2s steps(4,end) infinite}
+  @keyframes d{0%{content:''}25%{content:'.'}50%{content:'..'}75%{content:'...'}}
+  a.back{display:block;text-align:center;color:#ffffffd0;font-size:12px;font-weight:700;text-decoration:none;padding:4px}
+</style>
+</head>
+<body>
+<div id="app">
+  <h1>비밀 타일</h1>
+  <p class="sub" id="sub">다빈치 코드 방식 · 상대의 숨은 숫자를 먼저 다 맞히면 이겨요</p>
+  <button id="b-leave" class="leave hide">방 나가기</button>
+  <div id="err" class="hide"></div>
+
+  <!-- 1. 시작 -->
+  <section id="s-home" class="card hide">
+    <button class="rules-big" id="b-rules">📖 규칙 보기 (처음이면 꼭!)</button>
+    <h2 style="margin:16px 0 10px">방 만들기</h2>
+    <input id="name" maxlength="8" placeholder="내 이름 (선택)" autocomplete="off">
+    <h2 style="margin:16px 0 8px">누가 먼저 할지</h2>
+    <div id="pick-kind"></div>
+    <div style="height:14px"></div>
+    <button class="primary" id="b-create">새 방 만들기</button>
+    <div style="height:8px"></div>
+    <button class="ghost" id="b-bot">🤖 혼자 하기 (AI 상대)</button>
+    <h2 style="margin-top:22px">코드로 들어가기</h2>
+    <input id="code" inputmode="numeric" maxlength="4" placeholder="0000" autocomplete="off">
+    <div style="height:10px"></div>
+    <button class="ghost" id="b-join">들어가기</button>
+  </section>
+
+  <!-- 2. 대기 -->
+  <section id="s-wait" class="card hide">
+    <div class="codebox">
+      <div class="t">방 코드</div>
+      <div class="n" id="w-code">----</div>
+    </div>
+    <div style="height:10px"></div>
+    <button class="ghost" id="b-share">초대 링크 복사</button>
+    <p class="muted" style="margin-top:14px"><span class="dots">상대를 기다리는 중</span></p>
+    <p class="muted" style="margin:14px 0 10px;font-size:13px">둘 다 방을 만들었다면 한 명은 나가서 상대 코드로 들어가요</p>
+    <button class="ghost" id="b-leave-wait">나가서 다른 코드로 들어가기</button>
+  </section>
+
+  <!-- 3. 선 정하기 -->
+  <section id="s-pick" class="card hide"><div id="picker"></div></section>
+
+  <!-- 4. 게임 (끝난 뒤에도 줄은 남겨서 보여준다) -->
+  <section id="s-game" class="hide" style="display:flex;flex-direction:column;gap:12px">
+    <div class="card">
+      <div class="topbar">
+        <button class="chip" id="b-rules2">📖 규칙</button>
+        <span class="sp"></span>
+        <button class="chip" id="b-hint">💡 도움 켬</button>
+      </div>
+      <div class="result hide" id="d-box">
+        <div class="big" id="d-big">—</div>
+        <p class="muted" id="d-sub"></p>
+        <div style="height:12px"></div>
+        <button class="primary" id="b-again">다시 하기</button>
+      </div>
+      <div class="who">
+        <div id="w-me"><b id="w-me-n">나</b><small id="w-me-c"></small></div>
+        <div id="w-you"><b id="w-you-n">상대</b><small id="w-you-c"></small></div>
+      </div>
+      <div class="guide you" id="g-guide">—</div>
+      <div class="flash hide" id="g-flash"></div>
+    </div>
+
+    <div class="card">
+      <div class="lane-h"><span id="opp-h">상대 줄</span><small id="opp-sm">숫자는 숨겨져 있어요</small></div>
+      <div class="lane" id="lane-opp"></div>
+
+      <div class="mid">
+        <div class="piles">
+          <button class="pile b" id="pile-b"><div class="stack"></div><b>검정</b><span id="pile-b-n">0개</span></button>
+          <button class="pile w" id="pile-w"><div class="stack"></div><b>흰색</b><span id="pile-w-n">0개</span></button>
+        </div>
+        <div class="drawn" id="drawn"><div class="slot" id="drawn-tile"></div><span id="drawn-t">가져온 타일</span></div>
+      </div>
+
+      <div class="lane-h"><span>내 줄</span><small>왼쪽부터 작은 수</small></div>
+      <div class="lane" id="lane-me"></div>
+      <div class="legend"><i>👁</i> = 상대도 아는 숫자 (공개됨)</div>
+    </div>
+
+    <div class="card" id="ctl">
+      <div id="c-more" class="hide">
+        <div class="pad-h">⭕ 맞혔어요! 한 번 더 할까요?<br><span style="font-weight:700;color:#7a9a92;font-size:12px">더 하다가 틀리면 가져온 타일이 공개돼요</span></div>
+        <div class="row">
+          <button class="ghost" id="b-go">계속 맞히기</button>
+          <button class="primary" id="b-stop" style="font-size:16px">여기서 멈추기</button>
+        </div>
+      </div>
+      <div id="c-guess" class="hide">
+        <div class="pad-h" id="pad-h">상대 타일을 먼저 골라요</div>
+        <div class="pad none" id="pad"></div>
+        <button class="primary act" id="b-guess" disabled>맞혀보기</button>
+        <button class="ghost act hide" id="b-stop2" style="padding:11px">여기서 멈추기</button>
+      </div>
+      <div id="c-reveal" class="hide">
+        <div class="pad-h">위의 <b>내 줄</b>에서 공개할 숨은 타일을 하나 눌러요</div>
+        <button class="primary" id="b-reveal" disabled>이 타일 공개하기</button>
+      </div>
+      <div id="c-wait" class="hide"><p class="muted" id="c-wait-t"></p></div>
+      <div style="height:10px"></div>
+      <button class="ghost" id="b-resign" style="padding:10px;font-size:13px">기권</button>
+    </div>
+
+    <div class="card">
+      <h2 style="margin-bottom:8px">기록</h2>
+      <div class="log" id="log"><div>아직 기록이 없어요</div></div>
+    </div>
+  </section>
+
+  <a class="back" href="../">← 다른 게임</a>
+</div>
+<script src="../couple-common/picker.js"></script>
+<script src="../couple-common/rules.js"></script>
+<script>
+/* =========================================================================
+   비밀 타일 (다빈치 코드 방식) — 상대 줄의 숨은 숫자를 먼저 다 맞히면 이긴다.
+   흐름: 대기 → 선 정하기(미니게임) → 번갈아 [가져오기 → 맞히기 …] → 끝
+   상태는 서버(POST /api/tiles)가 들고 있고, 여기는 그리기만 한다.
+   규칙은 netlify/lib/tiles-core.mjs 가 정답이다. 상대 숨은 숫자는 서버가 아예 안 보낸다.
+   후보(도움)도 서버가 계산해서 준다 — 내 눈에 보이는 정보만으로.
+   ========================================================================= */
+const API = '/api/tiles', SAVE = 'couple-tiles', POLL_MS = 1400, POLL_SLOW_MS = 3200;
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+let S = { code: null, token: null, you: null, name: '' };
+let st = null;
+let timer = null, busy = false;
+let selTid = null, selN = null, selOwn = null, goOn = false, stepKey = null;
+let lastTurnKey = null;
+let hint = true;
+try { hint = localStorage.getItem(SAVE + ':hint') !== '0'; } catch (e) {}
+
+/* ------------------------------------------------------------------ 통신 */
+async function api(action, extra) {
+  const body = { action, code: S.code, token: S.token, ...(extra || {}) };
+  let res;
+  try {
+    res = await fetch(API, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  } catch (e) { throw new Error('인터넷이 끊긴 것 같아요'); }
+  let data = {};
+  try { data = await res.json(); } catch (e) {}
+  if (!res.ok) {
+    if (res.status === 404 && !data.error) throw new Error('서버를 찾지 못했어요. 넷리파이에 올린 주소로 열어주세요');
+    throw new Error(data.error || '요청이 실패했어요 (' + res.status + ')');
+  }
+  return data;
+}
+function adopt(data) {
+  if (data.token) S.token = data.token;
+  if (data.code) S.code = data.code;
+  if (typeof data.you === 'number') S.you = data.you;
+  st = data;
+  tellOpener();                                   // st 가 갱신된 뒤 (bot 여부를 같이 보낸다)
+  save();
+  render();
+}
+/* 탕비실(신영 메신저 lounge.html)이 window.open 으로 이 페이지를 열었으면, 방 코드가 생겼을 때
+ * 한 번 알려준다 — 탕비실이 방 사람들에게 "참가하기" 초대를 띄운다. 네 자리 코드뿐이라 대상 origin 은 가리지 않는다. */
+let toldCode = null;
+function tellOpener() {
+  if (!S.code || toldCode === S.code || !window.opener) return;
+  toldCode = S.code;
+  try { window.opener.postMessage({ type: 'couple-room', game: SAVE.replace('couple-', ''), code: S.code, you: S.you, name: S.name, bot: !!(st && st.bot) }, '*'); } catch (e) {}
+}
+function save() {
+  try { localStorage.setItem(SAVE, JSON.stringify({ code: S.code, token: S.token, name: S.name })); } catch (e) {}
+}
+function forget() {
+  try { localStorage.removeItem(SAVE); } catch (e) {}
+  S = { code: null, token: null, you: null, name: S.name };
+  st = null;
+}
+function err(msg) {
+  const e = $('err');
+  if (!msg) { e.classList.add('hide'); return; }
+  e.textContent = msg; e.classList.remove('hide');
+  clearTimeout(err.t); err.t = setTimeout(() => e.classList.add('hide'), 4200);
+}
+async function act(fn) {
+  if (busy) return;
+  busy = true;
+  try { await fn(); err(null); } catch (e) { err(e.message); } finally { busy = false; }
+}
+
+/* ------------------------------------------------------------------ 폴링 */
+function poll() {
+  clearTimeout(timer);
+  const gap = st && st.phase === 'done' ? POLL_SLOW_MS : POLL_MS;
+  timer = setTimeout(async () => {
+    if (S.code && S.token && document.visibilityState === 'visible' && !busy) {
+      const tok = S.token;   // 기다리는 사이 방을 나갔으면 받은 답을 버린다
+      try { const d = await api('state'); if (S.token === tok) adopt(d); } catch (e) {}
+    }
+    poll();
+  }, gap);
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && S.code) act(async () => adopt(await api('state')));
+});
+
+/* -------------------------------------------------------------- 소리 한 톨 */
+let AC = null;
+function beep(hi) {
+  try {
+    if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)();
+    if (AC.state === 'suspended') AC.resume();
+    const o = AC.createOscillator(), g = AC.createGain(), t = AC.currentTime;
+    o.type = 'triangle';
+    o.frequency.setValueAtTime(hi ? 660 : 440, t);
+    o.frequency.exponentialRampToValueAtTime(hi ? 520 : 360, t + 0.08);
+    g.gain.setValueAtTime(0.07, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
+    o.connect(g); g.connect(AC.destination); o.start(t); o.stop(t + 0.14);
+  } catch (e) {}
+}
+
+/* -------------------------------------------------------------- 규칙 설명 */
+const RULES_HTML = `
+<h3>① 한 줄 요약</h3>
+<p>상대 줄에 숨어 있는 숫자 타일을 <b>전부 먼저 맞히면</b> 이겨요.</p>
+
+<h3>② 준비 (저절로 돼요)</h3>
+<ul>
+  <li>타일은 24개 — <span class="mt b">⚫</span> 검정 0~11, <span class="mt w">⚪</span> 흰색 0~11. 같은 색·같은 숫자는 딱 하나씩이에요.</li>
+  <li>처음에 각자 <b>4개</b>씩 받아요. 남은 16개는 가운데 <b>더미</b>에 엎어 둬요.</li>
+  <li>내 줄은 <b>왼쪽부터 작은 수 → 큰 수</b>로 놓여요. 같은 숫자면 <b>검정이 왼쪽</b>.</li>
+  <li>상대에게는 내 타일의 <b>색만</b> 보이고 숫자는 안 보여요. 나도 상대 숫자는 몰라요.</li>
+</ul>
+
+<h3>③ 내 차례에 하는 일</h3>
+<ol>
+  <li><b>가져오기</b> — 가운데 더미에서 검정이나 흰색 하나를 골라 가져와요. 숫자는 나만 봐요. (더미가 비면 건너뛰어요)</li>
+  <li><b>맞히기</b> — 위쪽 상대 줄의 <b>?</b> 타일 하나를 누르고, 숫자판에서 숫자를 골라 <b>맞혀보기</b>.</li>
+  <li><b>맞혔으면</b> 그 타일이 공개돼요. 그다음 골라요.
+    <ul><li><b>계속 맞히기</b> — 다른 타일에 또 도전</li>
+        <li><b>여기서 멈추기</b> — 가져온 타일을 <b>숨긴 채</b> 내 줄에 넣고 차례를 넘겨요</li></ul></li>
+  <li><b>틀렸으면</b> 가져온 타일을 <b>공개한 채로</b> 내 줄에 넣고 차례가 끝나요.
+    더미가 비어서 가져온 게 없으면, 내 숨은 타일 하나를 골라 공개해요.</li>
+</ol>
+<p>한 차례에 <b>최소 한 번은 맞혀야</b> 멈출 수 있어요. 그러니까 매번 한 번은 꼭 도전해요.</p>
+
+<h3>④ 끝나는 조건</h3>
+<p>상대 타일이 <b>전부 공개되면 이겨요</b>. 내 타일이 전부 공개되면 져요. 점수는 따로 없어요.</p>
+
+<h3>⑤ 예시</h3>
+<div class="rl-ex">상대 줄이 <span class="mt b">?</span> <span class="mt w">?</span> <span class="mt b">?</span> <span class="mt w">7</span> 이에요.
+맨 오른쪽 흰 7이 공개됐으니, 그 바로 왼쪽 검정 ? 는 <b>7 이하</b>예요 (검정 7은 흰 7보다 왼쪽이라 7도 돼요).
+그런데 내가 <span class="mt b">6</span> 을 갖고 있다면 그 검정은 6이 아니에요 — 같은 타일은 하나뿐이니까요.</div>
+<div class="rl-ex">더미에서 <span class="mt w">3</span> 을 가져왔어요. 상대 검정 타일에 "4" — 맞혔어요!
+여기서 멈추면 흰 3은 숨긴 채 내 줄에 들어가요. 욕심내서 한 번 더 했다가 틀리면 흰 3이 모두에게 공개돼요.</div>
+
+<h3>⑥ 초보 팁</h3>
+<div class="rl-tip">💡 <b>도움</b>을 켜 두면 순서상 안 되는 숫자가 숫자판에서 흐려지고, 상대 타일 아래에 <b>후보 몇 개</b>인지 나와요. 후보가 적은 타일부터 노려요.</div>
+<div class="rl-tip">내가 가진 숫자, 이미 공개된 숫자, 내가 그 타일에 틀렸던 숫자(✕)는 답이 아니에요.</div>
+<div class="rl-tip">한 번 맞힌 뒤 후보가 많이 남았으면 <b>멈추는 게 안전</b>해요. 틀리면 내 타일 하나가 공개되거든요.</div>`;
+const rules = Rules.mount({ title: '비밀 타일 규칙', html: RULES_HTML, buttons: [$('b-rules'), $('b-rules2')], autoKey: SAVE });
+
+/* -------------------------------------------------------------- 선 정하기 */
+const chooser = Picker.chooser($('pick-kind'));
+const ackKey = () => SAVE + ':pick:' + st.code + ':' + st.round;
+const acked = () => { try { return sessionStorage.getItem(ackKey()) === '1'; } catch (e) { return false; } };
+const picker = Picker.mount($('picker'), {
+  onThrow: (v) => act(async () => { beep(false); adopt(await api('throw', { value: v })); }),
+  onDone: () => { try { sessionStorage.setItem(ackKey(), '1'); } catch (e) {} render(); },
+});
+
+/* ------------------------------------------------------------------ 이름 */
+const jo = Picker.jo;
+const meName = () => (st && st.name) || S.name || '나';
+const youName = () => (st && st.opponent.name) || '상대';
+const COL = { b: '검정', w: '흰' };
+const mt = (c, n) => '<span class="mt ' + c + '">' + (n === null || n === undefined ? '?' : n) + '</span>';
+
+/* -------------------------------------------------------------- 타일 줄
+   버튼은 모자랄 때만 새로 만들고 지우지 않는다(폴링 때 DOM 을 갈면 탭이 씹힌다). */
+function makeLane(el, onTap) {
+  const pool = [];
+  const seen = new Set();
+  let roundSeen = null;
+  return function sync(tiles, fill) {
+    while (pool.length < tiles.length) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      const i = pool.length;
+      b.onclick = () => onTap(i);
+      el.appendChild(b);
+      pool.push(b);
+    }
+    const fresh = roundSeen !== st.round;
+    if (fresh) { seen.clear(); roundSeen = st.round; }
+    pool.forEach((b, i) => {
+      const t = tiles[i];
+      b.classList.toggle('hide', !t);
+      if (!t) return;
+      fill(b, t);
+      if (!seen.has(t.id)) {
+        seen.add(t.id);
+        if (!fresh) { b.classList.remove('new'); void b.offsetWidth; b.classList.add('new'); setTimeout(() => b.classList.remove('new'), 1900); }
+      }
+    });
+  };
+}
+const syncOpp = makeLane($('lane-opp'), (i) => tapOpp(st.theirs[i]));
+const syncMe = makeLane($('lane-me'), (i) => tapMine(st.mine[i]));
+
+function tapOpp(t) {
+  if (!t || !st || st.phase !== 'play') return;
+  if (!st.yourTurn) return err(jo(youName(), '이', '가') + ' 하는 중이에요. 기다려요');
+  if (st.stage === 'draw') return err('먼저 가운데 더미에서 타일을 하나 가져와요');
+  if (st.stage === 'reveal') return err('지금은 아래 내 줄에서 공개할 타일을 골라요');
+  if (t.open) return err('이미 공개된 타일이에요. ? 타일을 골라요');
+  selTid = selTid === t.id ? null : t.id;
+  selN = null; goOn = true;
+  render();
+}
+function tapMine(t) {
+  if (!t || !st || st.phase !== 'play') return;
+  if (st.yourTurn && st.stage === 'reveal') {
+    if (t.open) return err('이미 공개된 타일이에요. 숨은 타일을 골라요');
+    selOwn = selOwn === t.id ? null : t.id;
+    render();
+    return;
+  }
+  err(t.open ? '이 타일은 상대도 알고 있어요 (👁)' : '내 타일이에요. 상대에겐 색만 보여요');
+}
+
+/* -------------------------------------------------------------- 숫자판 (한 번만 만든다) */
+const padBtns = [];
+for (let n = 0; n <= 11; n++) {
+  const b = document.createElement('button');
+  b.type = 'button'; b.textContent = n;
+  b.onclick = () => tapNum(n);
+  $('pad').appendChild(b);
+  padBtns.push(b);
+}
+function tapNum(n) {
+  if (!st || !st.yourTurn) return;
+  if (selTid === null) return err('먼저 위쪽 상대 줄의 ? 타일을 하나 눌러요');
+  if ((st.wrong[selTid] || []).includes(n)) return err('이 타일엔 이미 틀렸던 숫자예요 (✕)');
+  selN = selN === n ? null : n;
+  render();
+}
+
+/* 위치 설명 — "왼쪽에서 2번째" */
+function posOf(list, tid) { const i = list.findIndex((t) => t.id === tid); return i < 0 ? null : i + 1; }
+
+/* -------------------------------------------------------------- 기록 문장 */
+function lineOf(e) {
+  const mine = e.by === S.you;
+  const who = mine ? '나' : esc(youName());
+  if (e.t === 'draw') return (mine ? '내가' : esc(jo(youName(), '이', '가'))) + ' 더미에서 ' + mt(e.c, null) + ' 타일을 가져왔어요';
+  if (e.t === 'g') {
+    // 맞힌 대상은 그 사람의 상대 줄에 있다
+    const list = mine ? st.theirs : st.mine;
+    const t = list.find((x) => x.id === e.tid);
+    const where = t ? (mine ? '상대 ' : '내 ') + mt(t.c, t.open || !mine ? t.n : null) + '(왼쪽 ' + posOf(list, e.tid) + '번째)' : '타일';
+    return (mine ? '내가 ' : esc(jo(youName(), '이', '가')) + ' ') + where + ' 에 <b>' + e.n + '</b> → ' + (e.ok ? '⭕ 맞혔어요' : '❌ 틀렸어요');
+  }
+  if (e.t === 'miss') return (mine ? '가져온 ' : esc(youName()) + '의 가져온 ') + mt(e.c, e.n) + ' 타일이 공개된 채 줄에 들어갔어요';
+  if (e.t === 'reveal') return (mine ? '내가 ' : esc(jo(youName(), '이', '가')) + ' ') + '자기 타일 ' + mt(e.c, e.n) + ' 을 공개했어요';
+  if (e.t === 'stop') return (mine ? '내가' : esc(jo(youName(), '이', '가'))) + ' 멈췄어요' + (e.tid !== null ? ' — 가져온 타일은 숨긴 채 줄에' : '');
+  return who;
+}
+let logKey = null;
+function drawLog() {
+  const key = st.round + ':' + st.log.length + ':' + st.phase;
+  if (key === logKey) return;
+  logKey = key;
+  const rows = st.log.slice(-12).reverse().map((e) => '<div>' + lineOf(e) + '</div>');
+  $('log').innerHTML = rows.length ? rows.join('') : '<div>아직 기록이 없어요</div>';
+}
+/* 방금 일어난 일 한 줄 (맞힘/틀림) */
+function drawFlash() {
+  const f = $('g-flash');
+  let e = null;
+  for (let i = st.log.length - 1; i >= 0; i--) { if (st.log[i].t !== 'draw') { e = st.log[i]; break; } }
+  if (!e || st.phase !== 'play') { f.classList.add('hide'); return; }
+  let cls = 'info';
+  if (e.t === 'g') cls = e.ok === (e.by === S.you) ? 'ok' : 'no';
+  if (e.t === 'miss' || e.t === 'reveal') cls = e.by === S.you ? 'no' : 'ok';
+  // 틀린 뒤 '공개' 줄이 따라오면 그 둘을 묶어서
+  let html = lineOf(e);
+  if (e.t === 'miss') {
+    const g = st.log[st.log.length - 2];
+    if (g && g.t === 'g') html = lineOf(g) + '<br>' + html;
+  }
+  f.className = 'flash ' + cls;
+  f.innerHTML = html;
+}
+
+/* ------------------------------------------------------------------ 그리기 */
+function show(id) {
+  ['s-home', 's-wait', 's-pick', 's-game'].forEach((s) => $(s).classList.toggle('hide', s !== id));
+  $('b-leave').classList.toggle('hide', id === 's-home');
+}
+function render() {
+  if (!st) { show('s-home'); $('sub').textContent = '다빈치 코드 방식 · 상대의 숨은 숫자를 먼저 다 맞히면 이겨요'; return; }
+
+  if (st.phase === 'wait') {
+    show('s-wait');
+    $('sub').textContent = '방 코드를 알려주고 같이 들어와요';
+    $('w-code').textContent = st.code;
+    return;
+  }
+  if (st.phase === 'pick' || (st.phase === 'play' && st.fresh && !acked())) {
+    show('s-pick');
+    $('sub').textContent = '방 ' + st.code + ' · 누가 먼저 할까요';
+    picker.update(st.pick, { you: S.you, meName: meName(), youName: youName(), round: st.round,
+      extra: (meFirst) => (meFirst ? '내가 먼저 더미에서 타일을 가져와요' : jo(youName(), '이', '가') + ' 먼저 해요') });
+    return;
+  }
+
+  show('s-game');
+  $('sub').textContent = '방 ' + st.code + ' · ' + meName() + ' vs ' + youName();
+  const play = st.phase === 'play', mine = st.yourTurn;
+
+  // 단계가 바뀌면 고른 것들을 비운다
+  const key = st.round + ':' + st.turn + ':' + st.stage + ':' + st.streak + ':' + st.log.length;
+  if (key !== stepKey) {
+    const stageChanged = !stepKey || stepKey.split(':').slice(0, 4).join(':') !== key.split(':').slice(0, 4).join(':');
+    stepKey = key;
+    selN = null;
+    if (selTid !== null && !(st.theirs.find((t) => t.id === selTid && !t.open))) selTid = null;
+    if (stageChanged) { selOwn = null; goOn = false; }
+  }
+  if (!mine || !play) { selTid = null; selN = null; selOwn = null; }
+  // 차례가 나한테 넘어오면 소리
+  const tk = st.round + ':' + st.turn;
+  if (play && mine && lastTurnKey !== null && lastTurnKey !== tk) beep(false);
+  lastTurnKey = tk;
+
+  // 이름 · 남은 수
+  const hidMe = st.mine.filter((t) => !t.open).length, hidYou = st.theirs.filter((t) => !t.open).length;
+  $('w-me-n').textContent = meName(); $('w-you-n').textContent = youName();
+  $('w-me-c').textContent = '숨은 타일 ' + hidMe + '개';
+  $('w-you-c').textContent = '숨은 타일 ' + hidYou + '개';
+  $('w-me').classList.toggle('on', play && mine);
+  $('w-you').classList.toggle('on', play && !mine);
+  $('b-hint').textContent = hint ? '💡 도움 켬' : '💡 도움 끔';
+  $('b-hint').classList.toggle('on', hint);
+
+  // 결과
+  $('d-box').classList.toggle('hide', play);
+  if (!play) {
+    const win = st.winner === S.you;
+    $('d-box').className = 'result ' + (win ? 'win' : 'lose');
+    $('d-big').textContent = win ? '🎉 이겼어요!' : '졌어요…';
+    $('d-sub').textContent = st.reason === 'resign'
+      ? (win ? jo(youName(), '이', '가') + ' 기권했어요' : '기권했어요')
+      : (win ? '상대 타일을 전부 맞혔어요' : jo(youName(), '이', '가') + ' 내 타일을 전부 맞혔어요') + ' · 이제 모든 숫자가 보여요';
+  }
+
+  // 안내 띠 — 지금 할 수 있는 것
+  const g = $('g-guide');
+  g.className = 'guide ' + (play && mine ? 'me' : 'you');
+  g.classList.toggle('hide', !play);
+  const you = esc(youName()), youGa = esc(jo(youName(), '이', '가'));
+  let guide = '';
+  if (play && mine) {
+    if (st.stage === 'draw') guide = '① 가운데 더미에서 검정이나 흰색 타일을 하나 가져와요';
+    else if (st.stage === 'reveal') guide = '❌ 틀렸어요. 더미가 비어서 <b>내 숨은 타일 하나</b>를 골라 공개해요';
+    else if (st.stage === 'more' && !goOn) guide = '⭕ 맞혔어요! 계속 맞히거나, 멈추고 차례를 넘겨요';
+    else if (selTid === null) guide = '② 위쪽 상대 줄의 <b>?</b> 타일을 하나 눌러요' + (st.stage === 'guess' && !st.drawn ? ' (더미가 비었어요)' : '');
+    else if (selN === null) guide = '③ 아래 숫자판에서 숫자를 골라요';
+    else guide = '④ <b>맞혀보기</b>를 눌러요';
+  } else if (play) {
+    guide = '<span class="dots">' + (st.stage === 'draw' ? youGa + ' 타일을 가져오는 중' : st.stage === 'reveal' ? youGa + ' 공개할 타일을 고르는 중' : youGa + ' 내 타일을 맞히는 중') + '</span>';
+  }
+  g.innerHTML = guide;
+  drawFlash();
+
+  // 상대 줄
+  $('opp-h').textContent = youName() + '의 줄';
+  $('opp-sm').textContent = play ? '숫자는 숨겨져 있어요' : '모두 공개';
+  const showC = hint && play;
+  $('lane-opp').classList.toggle('cand', showC);
+  syncOpp(st.theirs, (b, t) => {
+    const hidden = t.n === null;
+    b.className = 'tile ' + t.c + (hidden ? ' q' : '') + (t.open ? ' open-opp' : '') + (t.id === selTid ? ' sel' : '');
+    const cn = showC && !t.open && st.cands[t.id] ? '<span class="cn">후보 ' + st.cands[t.id].length + '</span>' : '';
+    b.innerHTML = (hidden ? '?' : t.n) + cn;
+    b.setAttribute('aria-label', COL[t.c] + ' ' + (hidden ? '숨은 타일' : t.n));
+  });
+  // 내 줄
+  syncMe(st.mine, (b, t) => {
+    b.className = 'tile ' + t.c + (t.id === selOwn ? ' sel' : '');
+    b.innerHTML = t.n + (t.open ? '<span class="eye">👁</span>' : '');
+    b.setAttribute('aria-label', COL[t.c] + ' ' + t.n + (t.open ? ' 공개됨' : ''));
+  });
+
+  // 더미
+  $('pile-b-n').textContent = st.deckB + '개';
+  $('pile-w-n').textContent = st.deckW + '개';
+  const canDraw = play && mine && st.stage === 'draw';
+  $('pile-b').classList.toggle('go', canDraw && st.deckB > 0);
+  $('pile-w').classList.toggle('go', canDraw && st.deckW > 0);
+  $('pile-b').disabled = !st.deckB; $('pile-w').disabled = !st.deckW;
+  // 가져온 타일
+  const dt = $('drawn-tile');
+  if (st.drawn && play) {
+    dt.className = 'tile ' + st.drawn.c + (st.drawn.n === null ? ' q' : '');
+    dt.textContent = st.drawn.n === null ? '?' : st.drawn.n;
+    $('drawn-t').textContent = st.drawn.by === S.you ? '이번에 가져온 타일 (나만 봐요)' : jo(youName(), '이', '가') + ' 가져온 타일';
+  } else {
+    dt.className = 'slot'; dt.textContent = '';
+    $('drawn-t').textContent = play && !st.deckB && !st.deckW ? '더미가 비었어요' : '가져온 타일';
+  }
+
+  // 조작
+  $('ctl').classList.toggle('hide', !play);
+  const stage = play && mine ? st.stage : null;
+  $('c-more').classList.toggle('hide', !(stage === 'more' && !goOn));
+  $('c-guess').classList.toggle('hide', !((stage === 'guess') || (stage === 'more' && goOn)));
+  $('c-reveal').classList.toggle('hide', stage !== 'reveal');
+  $('c-wait').classList.toggle('hide', !(play && (!mine || stage === 'draw')));
+  $('c-wait-t').innerHTML = !mine ? '<span class="dots">' + youGa + ' 하는 중</span> · 내 줄 타일이 맞혀지는지 지켜봐요'
+    : '먼저 위의 <b>더미</b>(검정/흰색)를 눌러 타일을 가져와요';
+  $('b-stop2').classList.toggle('hide', !(stage === 'more' && goOn));
+  $('b-reveal').disabled = selOwn === null;
+  // 숫자판
+  const target = selTid !== null ? st.theirs.find((t) => t.id === selTid) : null;
+  $('pad').className = 'pad ' + (target ? target.c : 'none');
+  const wrong = target ? st.wrong[target.id] || [] : [];
+  const cands = target ? st.cands[target.id] || null : null;
+  padBtns.forEach((b, n) => {
+    b.classList.toggle('on', n === selN);
+    b.classList.toggle('wrong', wrong.includes(n));
+    b.classList.toggle('nope', !!(hint && cands && !cands.includes(n) && !wrong.includes(n)));
+  });
+  if (target) {
+    $('pad-h').innerHTML = '상대 ' + mt(target.c, null) + ' (왼쪽 ' + posOf(st.theirs, target.id) + '번째) 의 숫자는?' +
+      (hint && cands ? ' <span style="color:#7a9a92;font-weight:700">· 후보 ' + cands.length + '개</span>' : '');
+  } else $('pad-h').textContent = '위쪽 상대 줄의 ? 타일을 먼저 골라요';
+  $('b-guess').disabled = !(target && selN !== null);
+  $('b-guess').textContent = target && selN !== null ? COL[target.c] + ' 타일이 ' + selN + '? 맞혀보기' : '맞혀보기';
+  $('b-resign').classList.toggle('hide', !play);
+
+  drawLog();
+}
+
+/* ------------------------------------------------------------------ 버튼 */
+function drawFrom(c) {
+  if (!st || st.phase !== 'play') return;
+  if (!st.yourTurn) return err(jo(youName(), '이', '가') + ' 하는 중이에요');
+  if (st.stage !== 'draw') return err(st.drawn ? '이번 차례엔 이미 가져왔어요. 이제 상대 타일을 맞혀요' : '지금은 가져올 때가 아니에요');
+  act(async () => { beep(true); adopt(await api('draw', { c })); });
+}
+$('pile-b').onclick = () => drawFrom('b');
+$('pile-w').onclick = () => drawFrom('w');
+$('b-guess').onclick = () => {
+  if (selTid === null || selN === null) return;
+  const tid = selTid, n = selN;
+  act(async () => {
+    beep(true);
+    const d = await api('guess', { tid, n });
+    const hit = d.log.length && d.log.slice().reverse().find((e) => e.t === 'g');
+    adopt(d);
+    if (hit && hit.ok) beep(true);
+  });
+};
+const stop = () => act(async () => { adopt(await api('stop')); });
+$('b-stop').onclick = stop;
+$('b-stop2').onclick = stop;
+$('b-go').onclick = () => { goOn = true; render(); };
+$('b-reveal').onclick = () => {
+  if (selOwn === null) return;
+  const tid = selOwn;
+  act(async () => { adopt(await api('reveal', { tid })); });
+};
+$('b-hint').onclick = () => {
+  hint = !hint;
+  try { localStorage.setItem(SAVE + ':hint', hint ? '1' : '0'); } catch (e) {}
+  render();
+};
+$('b-resign').onclick = () => {
+  if (!confirm('정말 기권할까요?')) return;
+  act(async () => adopt(await api('resign')));
+};
+const createRoom = (bot) => act(async () => {
+  S.name = $('name').value.trim();
+  adopt(await api('create', { name: S.name, pick: chooser.get(), bot: !!bot }));
+  poll();
+});
+$('b-create').onclick = () => createRoom(false);
+$('b-bot').onclick = () => createRoom(true);     // 혼자 하기 — 서버가 1번 자리에 AI 를 앉힌다
+$('b-join').onclick = () => act(async () => {
+  const c = $('code').value.trim();
+  if (!/^\d{4}$/.test(c)) throw new Error('네 자리 숫자를 넣어주세요');
+  S.name = $('name').value.trim();
+  S.code = c;
+  adopt(await api('join', { code: c, name: S.name }));
+  poll();
+});
+$('b-again').onclick = () => act(async () => { stepKey = null; logKey = null; adopt(await api('restart', { round: st.round })); });
+$('b-share').onclick = async () => {
+  const url = location.origin + location.pathname + '?code=' + st.code;
+  const text = '비밀 타일 한 판! 방 코드 ' + st.code + '\n' + url;
+  try {
+    if (navigator.share) { await navigator.share({ title: '비밀 타일', text: '방 코드 ' + st.code, url }); return; }
+    await navigator.clipboard.writeText(text);
+    $('b-share').textContent = '복사했어요 ✓';
+    setTimeout(() => ($('b-share').textContent = '초대 링크 복사'), 1800);
+  } catch (e) { err('복사가 안 돼요. 방 코드 ' + st.code + ' 를 알려주세요'); }
+};
+['name', 'code'].forEach((id) => $(id).addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') $(id === 'code' ? 'b-join' : 'b-create').click();
+}));
+
+/* 방 나가기 — 방은 그대로 두고(12시간 뒤 만료) 이 폰에서만 잊는다 */
+function leave() {
+  if (st && st.phase !== 'wait' && st.phase !== 'done' && !confirm('방에서 나갈까요?\n하던 판은 여기서 끝나요')) return;
+  clearTimeout(timer);
+  forget(); selTid = selN = selOwn = null; stepKey = null; logKey = null; lastTurnKey = null;
+  history.replaceState(null, '', location.pathname);
+  $('code').value = '';
+  render();
+  $('code').focus();
+}
+$('b-leave').onclick = leave;
+$('b-leave-wait').onclick = leave;
+
+/* ------------------------------------------------------------------ 시작 */
+(async function boot() {
+  show('s-home');
+  const urlCode = new URLSearchParams(location.search).get('code');
+  let saved = null;
+  try { saved = JSON.parse(localStorage.getItem(SAVE) || 'null'); } catch (e) {}
+  if (saved && saved.name) { S.name = saved.name; $('name').value = saved.name; }
+  const urlName = (new URLSearchParams(location.search).get('name') || '').trim().slice(0, 8);
+  if (urlName && !$('name').value) { S.name = urlName; $('name').value = urlName; }   // 탕비실 등에서 이름을 넘겨준 경우
+
+  if (saved && saved.code && saved.token && (!urlCode || urlCode === saved.code)) {
+    S.code = saved.code; S.token = saved.token;
+    try { adopt(await api('state')); poll(); return; } catch (e) { forget(); }
+  }
+  if (new URLSearchParams(location.search).get('bot') === '1') {   // 탕비실 '혼자 하기' — 바로 AI 방을 만든다
+    history.replaceState(null, '', location.pathname);
+    render();
+    createRoom(true);
+    return;
+  }
+  if (urlCode && /^\d{4}$/.test(urlCode)) {
+    $('code').value = urlCode;
+    $('sub').textContent = '초대받은 방 ' + urlCode + ' · 이름을 넣고 들어가요';
+  }
+  render();
+})();
+</script>
+</body>
+</html>
