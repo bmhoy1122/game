@@ -89,7 +89,7 @@ function view(ctx) {
     first: s.first,
     turn: s.turn === undefined ? null : s.turn,
     yourTurn,
-    step: yourTurn ? s.step : (s.phase === 'play' ? s.step : null),
+    step: s.phase === 'play' ? s.step : null,
     hand,                                                 // 내 손패만
     canLine: yourTurn && s.step === 'play' ? hand.filter((id) => !lineWhy(room.lines[me][col(id)], id)) : [],
     oppHand: room.hands[them].length,                     // 상대는 장수만

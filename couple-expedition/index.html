@@ -146,7 +146,9 @@
   .b-line.dim{background:#cfdcd7;color:#6d837c}
   .b-discard{background:#f3e3cf;color:#6a4520}
 
-  .result{text-align:center;padding:4px 0 2px}
+  .result{text-align:center;padding:12px 14px}
+  body.ingame h1,body.ingame .sub,body.ingame .topbar{display:none}
+  .mini.out{background:rgba(255,255,255,.55);color:#3b2a10;box-shadow:none}
   .result .big{font-size:26px;font-weight:900;margin:0}
   .result .vs{font-size:14px;font-weight:800;color:#5f8a7e;margin:4px 0 10px}
   .win .big{color:#1f7a6a} .lose .big{color:#7b6a5a} .draw .big{color:#9a7a2a}
@@ -198,7 +200,7 @@
 
   <!-- 4. 게임 (끝난 뒤에도 판은 남겨서 보여준다) -->
   <section id="s-game" class="hide" style="display:flex;flex-direction:column;gap:8px">
-    <div class="gbar"><span class="t" id="g-title"></span><button class="mini" id="b-rules-game">📖 규칙</button></div>
+    <div class="gbar"><span class="t" id="g-title"></span><button class="mini" id="b-rules-game">📖 규칙</button><button class="mini out" id="b-leave-game">방 나가기</button></div>
 
     <div class="panel opp" id="p-opp">
       <div class="phead"><span class="nm" id="o-name">상대</span><span class="cnt" id="o-hand">손패 8장</span><span class="tot" id="o-tot">0점</span></div>
@@ -430,10 +432,10 @@ const picker = Picker.mount($('picker'), {
 function show(id) {
   ['s-home', 's-wait', 's-pick', 's-game'].forEach((s) => $(s).classList.toggle('hide', s !== id));
   $('b-leave').classList.toggle('hide', id === 's-home');
+  document.body.classList.toggle('ingame', id === 's-game');
 }
 const meName = () => (st && st.name) || S.name || '나';
 const youName = () => (st && st.opponent.name) || '상대';
-const jo = Picker.jo;
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 function scoreCell(cell, line, sc) {
@@ -455,7 +457,9 @@ function drawOpp() {
   $('p-opp').classList.toggle('on', st.phase === 'play' && !st.yourTurn);
   // 상대가 방금 한 일
   const opp = 1 - S.you, mine = [];
-  for (let i = st.log.length - 1; i >= 0 && st.log[i].by === opp; i--) mine.unshift(st.log[i]);
+  let i = st.log.length - 1;
+  while (i >= 0 && st.log[i].by !== opp) i--;                 // 내 행동은 건너뛰고 상대의 마지막 차례만
+  for (; i >= 0 && st.log[i].by === opp; i--) mine.unshift(st.log[i]);
   const say = (e) => e.t === 'line' ? cardName(e.card) + ' 탐험로에 놓음'
     : e.t === 'discard' ? cardName(e.card) + ' 버림'
     : e.from === 'deck' ? '덱에서 가져감' : SUIT[e.from].ic + ' 버림 더미에서 ' + cardName(e.card) + ' 가져감';
@@ -522,7 +526,7 @@ function drawBand() {
   $('st2').classList.toggle('on', st.step === 'draw');
   let h;
   if (!my) {
-    h = '<span class="dots">' + esc(jo(youName(), '이', '가')) + (st.step === 'draw' ? ' 한 장 가져가는 중' : ' 카드를 내는 중') + '</span>';
+    h = '<span class="dots">' + esc(youName()) + ' 차례 · ' + (st.step === 'draw' ? '한 장 가져가는 중' : '카드를 내는 중') + '</span>';
   } else if (st.step === 'draw') {
     h = '② 이제 <b>한 장 가져와요</b> — 덱(뭐가 나올지 몰라요)이나 반짝이는 버림 더미 맨 위';
   } else if (sel === null) {
@@ -554,13 +558,13 @@ function render() {
     show('s-pick');
     $('sub').textContent = '방 ' + st.code + ' · 누가 먼저 할까요';
     picker.update(st.pick, { you: S.you, meName: meName(), youName: youName(), round: st.round,
-      extra: (meFirst) => (meFirst ? '내가 먼저 카드를 내요' : jo(youName(), '이', '가') + ' 먼저 카드를 내요') + ' · 각자 8장으로 시작' });
+      extra: (meFirst) => (meFirst ? '내가 먼저 카드를 내요' : youName() + ' 먼저 시작해요') + ' · 각자 8장으로 시작' });
     return;
   }
 
   show('s-game');
   $('sub').textContent = '방 ' + st.code + ' · ' + meName() + ' vs ' + youName();
-  $('g-title').textContent = st.phase === 'done' ? '탐험 끝!' : (st.yourTurn ? '🟢 내 차례' : '⏳ ' + youName() + ' 차례');
+  $('g-title').textContent = '🧭 방 ' + st.code + ' · ' + (st.phase === 'done' ? '탐험 끝!' : st.yourTurn ? '🟢 내 차례' : '⏳ ' + youName() + ' 차례');
 
   if (st.phase === 'play') {
     $('d-box').classList.add('hide'); $('band').classList.remove('hide');
@@ -670,6 +674,7 @@ function leave() {
 }
 $('b-leave').onclick = leave;
 $('b-leave-wait').onclick = leave;
+$('b-leave-game').onclick = leave;
 
 /* ------------------------------------------------------------------ 시작 */
 (async function boot() {

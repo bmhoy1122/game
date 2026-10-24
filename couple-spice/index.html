@@ -60,10 +60,10 @@
   @keyframes pop{0%{transform:scale(.6);opacity:.3}70%{transform:scale(1.08)}100%{transform:none;opacity:1}}
   .cd.empty{visibility:hidden}
 
-  #market{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;padding-top:6px}
+  #market{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;padding-top:12px}
   #market .cd{height:86px}
   #market .cd .e{font-size:30px}
-  #hand{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;min-height:72px;padding-top:8px}
+  #hand{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;min-height:78px;padding-top:12px}
   #hand .cd{height:66px}
   #hand .cd .e{font-size:22px}
   #hand .cd .n{font-size:10px}
@@ -88,7 +88,7 @@
   .pile{background:#fbf3f6;border-radius:10px;padding:5px 2px 4px;text-align:center;min-width:0}
   .pile .h{font-size:15px;line-height:1.1}
   .pile .h small{font-size:10px;font-weight:800;color:#a5587c;margin-left:1px}
-  .pile .v{font-size:10.5px;font-weight:800;color:#a5587c;white-space:nowrap;overflow:hidden;letter-spacing:-.4px}
+  .pile .v{font-size:10.5px;font-weight:800;color:#a5587c;white-space:nowrap;overflow:hidden;letter-spacing:-.2px}
   .pile .v b{font-size:15px;color:#6b1840;margin-right:1px}
   .pile.gone{opacity:.45}
   .pile.gone .v{color:#c0392b}
@@ -250,6 +250,8 @@ const EMO = { d: '💎', g: '🥇', s: '🥈', c: '🧣', p: '🌶️', l: '👜
 const NAME = { d: '다이아', g: '금', s: '은', c: '비단', p: '향신료', l: '가죽', k: '낙타' };
 const HAND_MAX = 7;
 const jo = Picker.jo;
+/* 상대 이름 + 조사. 봇 이름(🤖 AI)은 받침 없는 '에이아이'로 읽는다 */
+const youJo = (a, b) => (st && st.bot ? youName() + b : jo(youName(), a, b));
 
 let S = { code: null, token: null, you: null, name: '' };
 let st = null;
@@ -512,7 +514,7 @@ function sellPreview(t, n) {
   return { sum: v.reduce((a, x) => a + x, 0), vals: v, bonus };
 }
 function guideText() {
-  if (!st.yourTurn) return '<span class="dots">' + esc(jo(youName(), '이', '가')) + ' 고르는 중</span>';
+  if (!st.yourTurn) return '<span class="dots">' + esc(youJo('이', '가')) + ' 고르는 중</span>';
   const p = pickInfo();
   if (p.mCamel) return '🐪 낙타 ' + p.mi.length + '마리 → <b>낙타 전부</b>를 눌러요';
   if (!p.mi.length && !p.hi.length && !selC) {
@@ -581,9 +583,9 @@ const meName = () => (st && st.name) || S.name || '나';
 const youName = () => (st && st.opponent.name) || '상대';
 const emos = (arr) => arr.map((t) => EMO[t]).join('');
 function lastText(l) {
-  if (!l) return st.yourTurn ? '내가 먼저 해요. 시작!' : esc(jo(youName(), '이', '가')) + ' 먼저 해요';
+  if (!l) return st.yourTurn ? '내가 먼저 해요. 시작!' : esc(youJo('이', '가')) + ' 먼저 해요';
   const mine = l.by === S.you;
-  const who = mine ? '내가' : esc(jo(youName(), '이', '가'));
+  const who = mine ? '내가' : esc(youJo('이', '가'));
   if (l.kind === 'take') return who + ' ' + EMO[l.type] + ' ' + NAME[l.type] + ' 1장 가져갔어요';
   if (l.kind === 'camels') return who + ' 🐪 낙타 ' + l.n + '마리 가져갔어요';
   if (l.kind === 'trade') return who + ' ' + emos(l.gave) + ' 내고 ' + emos(l.got) + ' 가져갔어요';
@@ -595,7 +597,7 @@ function drawPiles() {
     const v = st.tokens[t], p = piles[t];
     p.classList.toggle('gone', !v.length);
     p.querySelector('small').textContent = v.length ? '×' + v.length : '';
-    p.querySelector('.v').innerHTML = v.length ? '<b>' + v[0] + '</b>' + v.slice(1, 4).join(' ') + (v.length > 4 ? '…' : '') : '끝';
+    p.querySelector('.v').innerHTML = v.length ? '<b>' + v[0] + '</b> ' + v.slice(1, 4).join('\u2009') + (v.length > 4 ? '…' : '') : '끝';
   }
   $('m-deck').textContent = '덱 ' + st.deck + '장';
   $('m-empty').textContent = '빈 더미 ' + st.emptyPiles + '/3 (3개 비면 끝)';
@@ -606,7 +608,7 @@ function drawDone() {
   $('d-box').className = 'result card ' + kind;
   $('d-big').textContent = kind === 'win' ? '🎉 이겼어요!' : kind === 'lose' ? '졌어요…' : '비겼어요!';
   if (st.reason === 'resign') {
-    $('d-sub').textContent = kind === 'win' ? jo(youName(), '이', '가') + ' 기권했어요' : '기권했어요';
+    $('d-sub').textContent = kind === 'win' ? youJo('이', '가') + ' 기권했어요' : '기권했어요';
   } else {
     const f = st.final;
     let tie = '';
@@ -641,7 +643,7 @@ function render() {
     show('s-pick');
     $('sub').textContent = '방 ' + st.code + ' · 누가 먼저 할까요';
     picker.update(st.pick, { you: S.you, meName: meName(), youName: youName(), round: st.round,
-      extra: (meFirst) => (meFirst ? '내가 먼저 시장에서 골라요' : jo(youName(), '이', '가') + ' 먼저 골라요') });
+      extra: (meFirst) => (meFirst ? '내가 먼저 시장에서 골라요' : youJo('이', '가') + ' 먼저 골라요') });
     return;
   }
 
