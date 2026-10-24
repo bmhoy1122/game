@@ -458,7 +458,7 @@ function show(id) {
 }
 const meName = () => (st && st.name) || S.name || '나';
 const youName = () => (st && st.opponent.name) || '상대';
-const jo = (w, a, b) => (/AI$/.test(w) ? w + b : Picker.jo(w, a, b));   // '🤖 AI' 는 '에이아이' — 받침 없음
+const jo = Picker.jo;
 const colorName = (c) => (c === 'light' ? '흰 말 ⚪' : '보라 말 🟣');
 const diceTxt = (d) => (d ? d.join('·') : '');
 
