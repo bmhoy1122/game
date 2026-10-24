@@ -10,7 +10,10 @@ const path = require('path');
 
 const ROOT = path.join(__dirname, '..');
 const PORT = Number(process.env.PORT || 8787);
-const GAMES = { bingo: 'bingo-core.mjs', balance: 'balance-core.mjs', baseball: 'baseball-core.mjs', gomoku: 'gomoku-core.mjs' };
+const GAMES = {
+  bingo: 'bingo-core.mjs', balance: 'balance-core.mjs', baseball: 'baseball-core.mjs', gomoku: 'gomoku-core.mjs',
+  spice: 'spice-core.mjs', tiles: 'tiles-core.mjs', expedition: 'expedition-core.mjs', backgammon: 'backgammon-core.mjs',
+};
 const TYPES = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
   '.mjs': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
@@ -34,8 +37,12 @@ function send(res, status, type, body) {
 async function main() {
   const api = {};
   for (const [name, file] of Object.entries(GAMES)) {
-    const { handle } = await import(path.join(ROOT, 'netlify/lib', file));
-    api[name] = { handle, store: memStore() };
+    try {
+      const { handle } = await import(path.join(ROOT, 'netlify/lib', file));
+      api[name] = { handle, store: memStore() };
+    } catch (e) {                            // 규칙 파일 하나가 깨져도 나머지 게임은 돈다
+      console.log(`  (건너뜀) /api/${name} — ${String((e && e.message) || e).split('\n')[0]}`);
+    }
   }
 
   const server = http.createServer(async (req, res) => {
@@ -71,7 +78,7 @@ async function main() {
 
   server.listen(PORT, () => {
     console.log(`커플 게임 개발 서버  http://localhost:${PORT}/`);
-    for (const n of Object.keys(GAMES)) console.log(`  /api/${n}`);
+    for (const n of Object.keys(api)) console.log(`  /api/${n}`);
     console.log('(방 상태는 메모리에만 있어서 서버를 끄면 사라집니다)');
   });
 }

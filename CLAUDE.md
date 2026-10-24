@@ -2,7 +2,7 @@
 
 이 저장소에서 작업할 때 먼저 읽는 문서. 게임 하나가 폴더 하나다.
 
-지금 들어있는 게임은 다섯.
+지금 들어있는 게임은 아홉.
 
 | 폴더 | 게임 | 서버 |
 |---|---|---|
@@ -11,8 +11,12 @@
 | `couple-balance/` | 이심전심 — 둘이 동시에 고르고 같이 공개 | `/api/balance` |
 | `couple-baseball/` | 숫자야구 — 숨긴 숫자 세 개를 번갈아 맞히기 | `/api/baseball` |
 | `couple-gomoku/` | 오목 — 15×15, 금수(삼삼·사사·장목)를 흑백 따로 고른다 | `/api/gomoku` |
+| `couple-spice/` | 향신료 시장 — 자이푸르 방식 카드 게임 (모아서 비쌀 때 팔기) | `/api/spice` |
+| `couple-tiles/` | 비밀 타일 — 다빈치 코드 방식 숫자 타일 추리 | `/api/tiles` |
+| `couple-expedition/` | 탐험대 — 로스트 시티 방식 카드 게임 (탐험로에 오름차순으로 쌓기) | `/api/expedition` |
+| `couple-backgammon/` | 백개먼 — 주사위로 말 15개 먼저 빼내기 | `/api/backgammon` |
 
-**3장부터 8장까지는 전부 「밤」 게임 이야기다.** 커플 게임 넷은 9장에 따로 적었다.
+**3장부터 8장까지는 전부 「밤」 게임 이야기다.** 커플 게임 여덟은 9장에 따로 적었다.
 
 ---
 
@@ -66,10 +70,11 @@
 │  ├─ baseball-smoke.js  숫자야구 규칙 테스트
 │  ├─ gomoku-smoke.js    오목 규칙 테스트 (삼삼·사사·장목 판정 포함)
 │  ├─ pick-smoke.js      선 정하기 미니게임 테스트
-│  ├─ bot-smoke.js       혼자 하기(AI 상대) 테스트 — 네 게임 끝까지
-│  └─ couple-dev.js      커플 게임 넷 로컬 서버
+│  ├─ bot-smoke.js       혼자 하기(AI 상대) 테스트 — 앞의 네 게임 끝까지
+│  ├─ {spice,tiles,expedition,backgammon}-smoke.js   보드게임 넷 규칙·봇 테스트
+│  └─ couple-dev.js      커플 게임 여덟 로컬 서버
 ├─ netlify/
-│  ├─ functions/         함수 껍데기만. 파일 하나 = 함수 하나 (bingo · balance · baseball · gomoku)
+│  ├─ functions/         함수 껍데기만. 파일 하나 = 함수 하나 (커플 게임 하나에 하나씩)
 │  └─ lib/               규칙과 공용 코드 — 9장 참고
 ├─ evening-night/        게임 하나
 │  ├─ index.html         전부 여기 한 파일에 들어 있다 (약 67KB)
@@ -78,7 +83,8 @@
 ├─ couple-balance/       index.html 한 파일
 ├─ couple-baseball/      index.html 한 파일
 ├─ couple-gomoku/        index.html 한 파일
-└─ couple-common/        picker.js — 선 정하기 화면 (빙고·야구·오목이 같이 쓴다)
+├─ couple-{spice,tiles,expedition,backgammon}/   보드게임 넷, 각각 index.html 한 파일
+└─ couple-common/        picker.js — 선 정하기 화면 · rules.js — 규칙 설명 창
 ```
 
 넷리파이는 `main` 브랜치를 배포한다. 실험은 다른 브랜치에서 하고
@@ -94,8 +100,10 @@ node tools/balance-smoke.js         # 이심전심 규칙 테스트
 node tools/baseball-smoke.js        # 숫자야구 규칙 테스트
 node tools/gomoku-smoke.js          # 오목 규칙 테스트
 node tools/pick-smoke.js            # 선 정하기 미니게임
-node tools/bot-smoke.js             # 혼자 하기(AI 상대)  ← 커플 쪽은 전부 npm install 없이 돈다
-node tools/couple-dev.js            # 커플 게임 넷 로컬 서버 → localhost:8787
+node tools/bot-smoke.js             # 혼자 하기(AI 상대)
+node tools/spice-smoke.js           # 향신료 시장 (tiles · expedition · backgammon 도 같은 이름)
+                                    # ← 커플 쪽은 전부 npm install 없이 돈다
+node tools/couple-dev.js            # 커플 게임 여덟 로컬 서버 → localhost:8787
 python3 -m http.server 8000         # http://localhost:8000/evening-night/
 ```
 
@@ -291,9 +299,9 @@ GRAV = 0.6          GRAB_HOLD = 20     (Z 꾹 → 안기, 약 0.33초)
 
 ---
 
-## 9. 커플 게임 (`couple-bingo/` `couple-balance/` `couple-baseball/` `couple-gomoku/`)
+## 9. 커플 게임 (`couple-*/`)
 
-넷 다 각자 폰에서 네 자리 방 코드로 만난다. 떨어져 있어도 된다.
+여덟 다 각자 폰에서 네 자리 방 코드로 만난다. 떨어져 있어도 된다.
 
 | 게임 | 규칙 |
 |---|---|
@@ -301,6 +309,24 @@ GRAV = 0.6          GRAB_HOLD = 20     (Z 꾹 → 안기, 약 0.33초)
 | 이심전심 | 한 판 10문제. 둘이 **동시에** 고르고, 둘 다 고르면 공개. 끝나면 일치율. 질문 80개 |
 | 숫자야구 | 각자 1~9 서로 다른 숫자 셋을 숨김. 번갈아 맞히기. 선공이 맞히면 **후공에게 마지막 한 번** |
 | 오목 | 15×15. 선공이 흑. 금수(삼삼·사사·장목)를 **방 만들 때 흑백 따로** 고른다. 다섯이 되는 수는 금수여도 둔다 |
+| 향신료 시장 | 자이푸르 한 라운드. 가져오기·낙타 전부·교환·팔기. 상품 더미 3개가 비거나 덱이 모자라면 끝. 보너스 값은 끝날 때까지 비밀 |
+| 비밀 타일 | 다빈치 코드 2인, 조커 없음. 가져오기 → 맞히기(맞히면 계속/멈춤, 틀리면 가져온 타일 공개). 더미는 색을 골라 가져온다 |
+| 탐험대 | 로스트 시티 한 라운드. 놓기/버리기 → 가져오기(방금 버린 더미 금지). (합−20)×(1+내기), 8장 이상 +20 |
+| 백개먼 | 표준 한 판, 더블링 큐브 없음. 주사위는 seeded(코드:판:차례). 최대 수열의 접두어만 허용(강제 규칙). 개먼·백개먼은 표시만 |
+
+### 보드게임 넷 (향신료 시장 · 비밀 타일 · 탐험대 · 백개먼)
+
+사용자가 원작 규칙을 모른다는 전제로 만들었다. 원작 이름·그림은 쓰지 않는다(허브엔 "○○ 방식"으로만).
+- **규칙 설명 창** `couple-common/rules.js` — `Rules.mount({title, html, buttons, autoKey})`. 그 폰에서 처음 들어오면 한 번 저절로
+  열린다(`<SAVE>:rules-seen`). 홈에 큰 📖 버튼, 게임 화면에 작은 📖 버튼. 내용 순서: 요약 → 준비 → 내 차례 → 점수·끝 → 예시 → 팁.
+- 게임 화면에 **지금 할 일 안내 띠**가 있고, 안 되는 행동을 누르면 서버가 준 이유를 띄운다. 규칙 모르는 사람이 막히지 않게 하는 장치라 지우지 말 것.
+- 넷 다 선 정하기(picker) · 혼자 하기(봇) · 방 나가기 · `?code/?name/?bot=1` · `tellOpener` 를 오목과 같은 코드로 갖고 있다.
+- 손패·덱은 공용 문서에 두고(차례제라 한 명만 쓴다) **view 에서 상대 것은 개수만** 내보낸다. 각 smoke 가 응답 JSON 을 뒤져 확인한다.
+  비밀 타일은 더 엄격하다 — 상대 숨은 타일은 색과 id 만, 추측 기록도 id 로 남긴다. '도움'(후보 숫자 흐리기)은 내 눈에 보이는 정보만으로 서버가 계산.
+- 봇 수준(각 smoke 의 수백 판 시뮬레이션): 무작위 상대에겐 거의 다 이기고, 향신료 시장은 한 수 앞 욕심쟁이에게 35% 정도 이긴다.
+  백개먼 봇은 한 차례에 굴리기+걸음+확정을 한 행동씩 해서 6~9초 걸린다.
+- 원작과 다른 점: 향신료 시장·탐험대는 한 라운드(원작 3라운드), 비밀 타일은 조커 없음, 백개먼은 한 걸음에 주사위 하나씩(두 눈 합쳐 한 번에 못 옮김)·첫 수 특례 없음.
+  향신료 시장은 둘이 교환만 계속하면 끝나지 않는다(원작도 같다).
 
 ### 선 정하기
 
@@ -319,13 +345,14 @@ GRAV = 0.6          GRAB_HOLD = 20     (Z 꾹 → 안기, 약 0.33초)
 
 | 파일 | 역할 |
 |---|---|
-| `netlify/functions/{bingo,balance,baseball,gomoku}.mjs` | 넷리파이 껍데기. 각 6줄. `/api/<게임>` |
+| `netlify/functions/<게임>.mjs` | 넷리파이 껍데기. 각 6줄. `/api/<게임>` |
 | `netlify/lib/blob-handler.mjs` | 껍데기 공용. **여기서만** `@netlify/blobs` 를 붙인다 |
-| `netlify/lib/room-kit.mjs` | 넷 다 쓰는 공용 방 (만들기·들어가기·확인·다시 하기·만료) |
+| `netlify/lib/room-kit.mjs` | 다 같이 쓰는 공용 방 (만들기·들어가기·확인·다시 하기·만료) |
 | `netlify/lib/first-pick.mjs` | 선 정하기 미니게임 규칙 |
-| `netlify/lib/{bingo,balance,baseball,gomoku}-core.mjs` | 규칙 전부. 저장소는 인자로 받는다 |
+| `netlify/lib/<게임>-core.mjs` | 규칙 전부. 저장소는 인자로 받는다 |
 | `tools/couple-dev.js` | 같은 core 에 메모리 저장소를 끼운 로컬 서버. 게임마다 저장소 따로 |
-| `couple-common/picker.js` | 선 정하기 화면. 빙고·야구·오목이 `<script src>` 로 같이 쓴다 |
+| `couple-common/picker.js` | 선 정하기 화면 + `jo()`. 이심전심 빼고 다 `<script src>` 로 같이 쓴다 |
+| `couple-common/rules.js` | 규칙 설명 창. 보드게임 넷이 쓴다 |
 | `tools/*-smoke.js` | 같은 core 를 그대로 불러 규칙만 돌린다 |
 
 규칙 파일에 `@netlify/blobs` import 가 없어서 **`npm install` 없이** 테스트와 로컬 플레이가 된다.
@@ -359,6 +386,7 @@ GRAV = 0.6          GRAB_HOLD = 20     (Z 꾹 → 안기, 약 0.33초)
 - **폴링 때마다 버튼을 새로 만들지 말 것.** 1.4초마다 DOM 을 갈면 누르는 도중에 버튼이
   바뀌어서 탭이 씹힌다. 숫자야구 키패드·이심전심 보기는 한 번만 만들고 상태만 바꾼다.
 - **이름 뒤 조사는 `jo()` 로.** 받침을 보고 은/는 · 이/가를 고른다. "지유는(은)" 같은 표기를 쓰지 말 것.
+  영어·숫자로 끝나면 읽는 소리로 본다('🤖 AI'→가, 'Tom'→이, '7'→이). 예전엔 'AI이(가)'로 나왔다.
 - 오목은 한 번 탭하면 반투명 돌(미리 보기), 같은 자리를 한 번 더 누르거나 '여기 두기'로 둔다.
   폰에서 손가락이 빗나가는 걸 막는 장치다. 흑 차례엔 금수 자리에 ✕ 를 그린다(서버가 `forbidden` 으로 준다).
 - 오목 금수는 시작 화면에서 고르고(묶음: 세이클럽식 · 렌주 · 금수 없음, 칸마다 켜고 끄기), 그 폰에 기억한다.

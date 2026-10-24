@@ -57,10 +57,17 @@
   style.textContent = css;
   document.head.appendChild(style);
 
+  // 받침이 있으면 a(은·이·과), 없으면 b(는·가·와). 영어·숫자로 끝나면 읽는 소리로 본다 —
+  // 'AI'(에이아이)는 받침 없음, 'Tom'(톰)·'7'(칠)은 받침 있음. 모르는 글자만 '이(가)' 로 둘 다 쓴다.
   function jo(w, a, b) {
-    const c = String(w).charCodeAt(String(w).length - 1);
-    if (!(c >= 0xac00 && c <= 0xd7a3)) return w + a + '(' + b + ')';
-    return w + ((c - 0xac00) % 28 ? a : b);
+    const s = String(w).trim();
+    const ch = s.slice(-1), c = ch.charCodeAt(0);
+    let batchim;
+    if (c >= 0xac00 && c <= 0xd7a3) batchim = (c - 0xac00) % 28 !== 0;
+    else if (/[0-9]/.test(ch)) batchim = '013678'.includes(ch);        // 영 일 삼 육 칠 팔
+    else if (/[a-z]/i.test(ch)) batchim = 'lmnr'.includes(ch.toLowerCase());   // 엘 엠 엔 알
+    else return w + a + '(' + b + ')';
+    return w + (batchim ? a : b);
   }
   function esc(s) {
     return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
