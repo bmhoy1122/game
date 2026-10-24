@@ -250,8 +250,7 @@ const EMO = { d: '💎', g: '🥇', s: '🥈', c: '🧣', p: '🌶️', l: '👜
 const NAME = { d: '다이아', g: '금', s: '은', c: '비단', p: '향신료', l: '가죽', k: '낙타' };
 const HAND_MAX = 7;
 const jo = Picker.jo;
-/* 상대 이름 + 조사. 봇 이름(🤖 AI)은 받침 없는 '에이아이'로 읽는다 */
-const youJo = (a, b) => (st && st.bot ? youName() + b : jo(youName(), a, b));
+const youJo = (a, b) => jo(youName(), a, b);      // 상대 이름 + 조사 (🤖 AI 는 jo 가 '에이아이'로 읽는다)
 
 let S = { code: null, token: null, you: null, name: '' };
 let st = null;
