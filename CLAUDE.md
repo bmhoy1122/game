@@ -2,12 +2,13 @@
 
 이 저장소에서 작업할 때 먼저 읽는 문서. 게임 하나가 폴더 하나다.
 
-지금 들어있는 게임은 아홉.
+지금 들어있는 게임은 열.
 
 | 폴더 | 게임 | 서버 |
 |---|---|---|
 | `evening-night/` | 「어쩐지 좋은 기분이 드는 밤」 — 세 살 아이와 같이 하는 횡스크롤 | 없음 |
 | `couple-bingo/` | 커플 빙고 — 번갈아 숫자를 불러 3줄 먼저 | `/api/bingo` |
+| `couple-wordbingo/` | 단어 빙고 — 주제를 정하고 각자 판에 단어를 직접 써서 하는 빙고 | `/api/wordbingo` |
 | `couple-balance/` | 이심전심 — 둘이 동시에 고르고 같이 공개 | `/api/balance` |
 | `couple-baseball/` | 숫자야구 — 숨긴 숫자 세 개를 번갈아 맞히기 | `/api/baseball` |
 | `couple-gomoku/` | 오목 — 15×15, 금수(삼삼·사사·장목)를 흑백 따로 고른다 | `/api/gomoku` |
@@ -16,7 +17,7 @@
 | `couple-expedition/` | 탐험대 — 로스트 시티 방식 카드 게임 (탐험로에 오름차순으로 쌓기) | `/api/expedition` |
 | `couple-backgammon/` | 백개먼 — 주사위로 말 15개 먼저 빼내기 | `/api/backgammon` |
 
-**3장부터 8장까지는 전부 「밤」 게임 이야기다.** 커플 게임 여덟은 9장에 따로 적었다.
+**3장부터 8장까지는 전부 「밤」 게임 이야기다.** 커플 게임 아홉은 9장에 따로 적었다.
 
 ---
 
@@ -72,7 +73,8 @@
 │  ├─ pick-smoke.js      선 정하기 미니게임 테스트
 │  ├─ bot-smoke.js       혼자 하기(AI 상대) 테스트 — 앞의 네 게임 끝까지
 │  ├─ {spice,tiles,expedition,backgammon}-smoke.js   보드게임 넷 규칙·봇 테스트
-│  └─ couple-dev.js      커플 게임 여덟 로컬 서버
+│  ├─ wordbingo-smoke.js 단어 빙고 규칙·봇 테스트
+│  └─ couple-dev.js      커플 게임 아홉 로컬 서버
 ├─ netlify/
 │  ├─ functions/         함수 껍데기만. 파일 하나 = 함수 하나 (커플 게임 하나에 하나씩)
 │  └─ lib/               규칙과 공용 코드 — 9장 참고
@@ -80,6 +82,7 @@
 │  ├─ index.html         전부 여기 한 파일에 들어 있다 (약 67KB)
 │  └─ art/  hero.png  mob.png  prop.png
 ├─ couple-bingo/         index.html 한 파일
+├─ couple-wordbingo/     index.html 한 파일
 ├─ couple-balance/       index.html 한 파일
 ├─ couple-baseball/      index.html 한 파일
 ├─ couple-gomoku/        index.html 한 파일
@@ -101,9 +104,9 @@ node tools/baseball-smoke.js        # 숫자야구 규칙 테스트
 node tools/gomoku-smoke.js          # 오목 규칙 테스트
 node tools/pick-smoke.js            # 선 정하기 미니게임
 node tools/bot-smoke.js             # 혼자 하기(AI 상대)
-node tools/spice-smoke.js           # 향신료 시장 (tiles · expedition · backgammon 도 같은 이름)
+node tools/spice-smoke.js           # 향신료 시장 (tiles · expedition · backgammon · wordbingo 도 같은 이름)
                                     # ← 커플 쪽은 전부 npm install 없이 돈다
-node tools/couple-dev.js            # 커플 게임 여덟 로컬 서버 → localhost:8787
+node tools/couple-dev.js            # 커플 게임 아홉 로컬 서버 → localhost:8787
 python3 -m http.server 8000         # http://localhost:8000/evening-night/
 ```
 
@@ -301,11 +304,12 @@ GRAV = 0.6          GRAB_HOLD = 20     (Z 꾹 → 안기, 약 0.33초)
 
 ## 9. 커플 게임 (`couple-*/`)
 
-여덟 다 각자 폰에서 네 자리 방 코드로 만난다. 떨어져 있어도 된다.
+아홉 다 각자 폰에서 네 자리 방 코드로 만난다. 떨어져 있어도 된다.
 
 | 게임 | 규칙 |
 |---|---|
 | 커플 빙고 | 각자 1~25 를 섞은 판. 번갈아 숫자를 부르면 **두 판 모두** 체크. 가로·세로·대각 3줄 먼저 |
+| 단어 빙고 | 주제·판 크기(3·4·5)·목표 줄(1~5)을 방 만들 때 고른다. 각자 칸에 단어를 쓰고, 번갈아 **내 판의 칸을 눌러** 부른다. 상대 판에 같은 단어(띄어쓰기·대소문자 무시)가 있으면 같이 지워진다 |
 | 이심전심 | 한 판 10문제. 둘이 **동시에** 고르고, 둘 다 고르면 공개. 끝나면 일치율. 질문 80개 |
 | 숫자야구 | 각자 1~9 서로 다른 숫자 셋을 숨김. 번갈아 맞히기. 선공이 맞히면 **후공에게 마지막 한 번** |
 | 오목 | 15×15. 선공이 흑. 금수(삼삼·사사·장목)를 **방 만들 때 흑백 따로** 고른다. 다섯이 되는 수는 금수여도 둔다 |
@@ -313,6 +317,19 @@ GRAV = 0.6          GRAB_HOLD = 20     (Z 꾹 → 안기, 약 0.33초)
 | 비밀 타일 | 다빈치 코드 2인, 조커 없음. 가져오기 → 맞히기(맞히면 계속/멈춤, 틀리면 가져온 타일 공개). 더미는 색을 골라 가져온다 |
 | 탐험대 | 로스트 시티 한 라운드. 놓기/버리기 → 가져오기(방금 버린 더미 금지). (합−20)×(1+내기), 8장 이상 +20 |
 | 백개먼 | 표준 한 판, 더블링 큐브 없음. 주사위는 seeded(코드:판:차례). 최대 수열의 접두어만 허용(강제 규칙). 개먼·백개먼은 표시만 |
+
+### 단어 빙고 (`couple-wordbingo/`)
+
+숫자 빙고와 흐름은 같다(대기 → 선 정하기 → 쓰기 → 부르기). 다른 점만:
+- 판은 각자 자기 문서(`board` 문자열 배열), 부른 단어는 공용 `room.called` = `[{w, k, by}]`(k = `norm(w)`).
+  같은 단어 판정은 `norm` 하나뿐 — 띄어쓰기·대소문자·NFC 만 무시한다. '사과'와 '빨간사과'는 다른 단어.
+- **부르기는 내 판의 칸 번호(`i`)로만.** 자유 입력을 받으면 오타·없는 단어로 판이 안 움직인다.
+- 응답의 `called[].both` 는 두 판 다 있던 단어. 부른 단어는 어차피 공개라 새는 건 '상대도 그 단어를 썼다'뿐이다.
+  상대 판 전체는 끝날 때(`opponentBoard`)까지 안 보낸다.
+- 주제 목록(`TOPICS`)은 core 가 정답이고 화면에 이름·아이콘만 복사돼 있다. 단어 목록이 있는 주제만 '✨ 빈칸 채우기'(`suggest`,
+  쓰는 동안만 응답에 실림)와 봇 판에 쓰인다. 직접 쓴 주제·커플 주제(가고 싶은 곳 등)는 봇이 여러 주제를 섞어 써서 거의 안 겹친다.
+- 쓰던 단어는 그 폰에 `couple-wordbingo:draft:<코드>:<판>` 으로 임시 저장 — 새로고침해도 남는다.
+- 칸 글자 크기는 판 크기·단어 길이로 줄인다. 입력칸이 16px 보다 작아서 iOS 확대를 막으려고 viewport 에 `maximum-scale=1`.
 
 ### 보드게임 넷 (향신료 시장 · 비밀 타일 · 탐험대 · 백개먼)
 
@@ -352,7 +369,7 @@ GRAV = 0.6          GRAB_HOLD = 20     (Z 꾹 → 안기, 약 0.33초)
 | `netlify/lib/<게임>-core.mjs` | 규칙 전부. 저장소는 인자로 받는다 |
 | `tools/couple-dev.js` | 같은 core 에 메모리 저장소를 끼운 로컬 서버. 게임마다 저장소 따로 |
 | `couple-common/picker.js` | 선 정하기 화면 + `jo()`. 이심전심 빼고 다 `<script src>` 로 같이 쓴다 |
-| `couple-common/rules.js` | 규칙 설명 창. 보드게임 넷이 쓴다 |
+| `couple-common/rules.js` | 규칙 설명 창. 보드게임 넷과 단어 빙고가 쓴다 |
 | `tools/*-smoke.js` | 같은 core 를 그대로 불러 규칙만 돌린다 |
 
 규칙 파일에 `@netlify/blobs` import 가 없어서 **`npm install` 없이** 테스트와 로컬 플레이가 된다.
