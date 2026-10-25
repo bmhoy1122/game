@@ -13,6 +13,7 @@ const PORT = Number(process.env.PORT || 8787);
 const GAMES = {
   bingo: 'bingo-core.mjs', balance: 'balance-core.mjs', baseball: 'baseball-core.mjs', gomoku: 'gomoku-core.mjs',
   spice: 'spice-core.mjs', tiles: 'tiles-core.mjs', expedition: 'expedition-core.mjs', backgammon: 'backgammon-core.mjs',
+  wordbingo: 'wordbingo-core.mjs',
 };
 const TYPES = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8',

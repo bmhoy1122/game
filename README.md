@@ -6,6 +6,7 @@
 |---|---|---|
 | `evening-night/` | 어쩐지 좋은 기분이 드는 밤 — 세 살 아이와 같이 하는 횡스크롤 | 없음 |
 | `couple-bingo/` | 커플 빙고 — 번갈아 숫자를 불러 3줄 먼저 | `/api/bingo` |
+| `couple-wordbingo/` | 단어 빙고 — 주제를 정하고 각자 판에 단어를 직접 써서 하는 빙고 | `/api/wordbingo` |
 | `couple-balance/` | 이심전심 — 둘이 동시에 고르고 같이 공개, 일치율 | `/api/balance` |
 | `couple-baseball/` | 숫자야구 — 숨긴 숫자 세 개를 번갈아 맞히기 | `/api/baseball` |
 | `couple-gomoku/` | 오목 — 15×15, 금수(삼삼·사사·장목)를 흑백 따로 고른다 | `/api/gomoku` |
@@ -34,9 +35,11 @@
 │  ├─ pick-smoke.js     선 정하기 미니게임 테스트
 │  ├─ bot-smoke.js      혼자 하기(AI) 테스트
 │  ├─ {spice,tiles,expedition,backgammon}-smoke.js  보드게임 넷 테스트
-│  └─ couple-dev.js     커플 게임 여덟을 로컬에서 돌리는 서버 (방 상태는 메모리)
+│  ├─ wordbingo-smoke.js 단어 빙고 테스트
+│  └─ couple-dev.js     커플 게임 아홉을 로컬에서 돌리는 서버 (방 상태는 메모리)
 ├─ evening-night/       index.html + art/
 ├─ couple-bingo/        index.html
+├─ couple-wordbingo/    index.html
 ├─ couple-balance/      index.html
 ├─ couple-baseball/     index.html
 ├─ couple-gomoku/       index.html
@@ -93,9 +96,9 @@ node tools/baseball-smoke.js   # 숫자야구 규칙
 node tools/gomoku-smoke.js     # 오목 규칙
 node tools/pick-smoke.js       # 선 정하기
 node tools/bot-smoke.js        # 혼자 하기(AI)
-node tools/spice-smoke.js      # 향신료 시장 (tiles · expedition · backgammon 도 같은 이름)
+node tools/spice-smoke.js      # 향신료 시장 (tiles · expedition · backgammon · wordbingo 도 같은 이름)
                                # ← 전부 npm install 없이 돈다
-node tools/couple-dev.js       # 커플 게임 여덟을 끝까지 돌려보는 서버 (8787)
+node tools/couple-dev.js       # 커플 게임 아홉을 끝까지 돌려보는 서버 (8787)
 python3 -m http.server 8000    # http://localhost:8000/evening-night/
 ```
 
