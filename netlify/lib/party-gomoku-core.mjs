@@ -107,7 +107,8 @@ function view(ctx) {
     turn: s.turn, yourTurn, upcoming,
     winTeam: s.winTeam, draw: s.draw, line: s.line || null, reason: s.reason,
     winners: s.winners,
-    rank: done ? ranking(room.players.map((_, i) => (room.out && room.out[i] ? null : s.winners.includes(i) ? 1 : 0))) : null,
+    // 이긴 팀 1등, 진 팀 2등 (무승부면 다 1등). 기권한 사람은 빠진다
+    rank: done ? ranking(room.players.map((_, i) => (room.out && room.out[i] ? null : s.winners.includes(i) ? 1 : 0))).map((x) => ({ ...x, rank: x.s ? 1 : s.draw ? 1 : 2 })) : null,
     forbidden,
   };
 }

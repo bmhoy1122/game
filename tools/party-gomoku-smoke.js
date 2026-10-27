@@ -96,7 +96,7 @@ const lib = (f) => import(path.join(__dirname, '..', 'netlify/lib', f));
         check(`${n}명: 다섯 이은 팀 전원이 winners`, JSON.stringify(r.body.winners) === JSON.stringify(r.body.players.map((p, i) => i).filter((i) => r.body.players[i].team === wt)) && r.body.line.length >= 5);
         check(`${n}명: 마지막 수를 둔 사람이 이긴 팀`, out.room.players[last[2]].team === wt);
         check(`${n}명: kit 팀 결과 = 이긴 팀 하나`, r.body.team && JSON.stringify(r.body.team.winners) === JSON.stringify([wt]) && r.body.team.mode === 'any', JSON.stringify(r.body.team));
-        check(`${n}명: 등수 — 이긴 팀 1등, 진 팀 2등`, r.body.rank.every((x) => (x.rank === 1) === (r.body.players[x.i].team === wt)));
+        check(`${n}명: 등수 — 이긴 팀 1등, 진 팀 2등`, r.body.rank.every((x) => x.rank === (r.body.players[x.i].team === wt ? 1 : 2)));
       }
       check(`${n}명: 남의 토큰은 응답에 없다`, !deepHas(r.body, (k) => k === 'token'));
       if (n === 4) {

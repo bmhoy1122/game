@@ -2,7 +2,7 @@
 
 이 저장소에서 작업할 때 먼저 읽는 문서. 게임 하나가 폴더 하나다.
 
-지금 들어있는 게임은 열.
+지금 들어있는 게임은 열일곱 (밤 1 · 커플 9 · 여럿이 7).
 
 | 폴더 | 게임 | 서버 |
 |---|---|---|
@@ -20,8 +20,11 @@
 | `party-spice/` | 여럿이 향신료 시장 — 2~8명, 덱을 여러 벌 | `/api/party-spice` |
 | `party-expedition/` | 여럿이 탐험대 — 2~8명, 덱을 여러 벌 | `/api/party-expedition` |
 | `party-marble/` | 마블 — 모노폴리·부루마불 방식 부동산 보드게임, 2~8명 | `/api/party-marble` |
+| `party-gomoku/` | 팀 오목 — 흑팀·백팀이 팀원끼리 번갈아 한 수씩, 2~8명 | `/api/party-gomoku` |
+| `party-balance/` | 여럿이 이심전심 — 동시에 고르고 공개, 텔레파시 점수·팀 일치, 2~8명 | `/api/party-balance` |
+| `party-wordbingo/` | 여럿이 단어 빙고 — 2~8명 | `/api/party-wordbingo` |
 
-**3장부터 8장까지는 전부 「밤」 게임 이야기다.** 커플 게임 아홉은 9장에 따로 적었다.
+**3장부터 8장까지는 전부 「밤」 게임 이야기다.** 커플 게임 아홉은 9장, 여럿이(2~8명·팀전) 게임 일곱은 10장에 따로 적었다.
 
 ---
 
@@ -78,7 +81,8 @@
 │  ├─ bot-smoke.js       혼자 하기(AI 상대) 테스트 — 앞의 네 게임 끝까지
 │  ├─ {spice,tiles,expedition,backgammon}-smoke.js   보드게임 넷 규칙·봇 테스트
 │  ├─ wordbingo-smoke.js 단어 빙고 규칙·봇 테스트
-│  ├─ party-smoke.js     여럿이 하는 방(party-kit) + 네 게임 테스트
+│  ├─ party-smoke.js     여럿이 하는 방(party-kit, 팀전 포함) + 네 게임 테스트
+│  ├─ party-{gomoku,balance,wordbingo}-smoke.js   팀 오목 · 여럿이 이심전심 · 여럿이 단어 빙고
 │  └─ couple-dev.js      커플 게임 아홉 로컬 서버
 ├─ netlify/
 │  ├─ functions/         함수 껍데기만. 파일 하나 = 함수 하나 (커플 게임 하나에 하나씩)
@@ -93,7 +97,7 @@
 ├─ couple-gomoku/        index.html 한 파일
 ├─ couple-{spice,tiles,expedition,backgammon}/   보드게임 넷, 각각 index.html 한 파일
 ├─ couple-common/        picker.js — 선 정하기 화면 · rules.js — 규칙 설명 창
-├─ party-{bingo,spice,expedition,marble}/   여럿이(2~8명) 게임 넷 — 10장
+├─ party-{bingo,spice,expedition,marble,gomoku,balance,wordbingo}/   여럿이(2~8명) 게임 일곱 — 10장
 └─ party-common/         party.js — 여럿이 게임 공용 화면(홈·대기실·폴링)
 ```
 
@@ -440,7 +444,8 @@ GRAV = 0.6          GRAB_HOLD = 20     (Z 꾹 → 안기, 약 0.33초)
 ## 10. 여럿이 하는 게임 (`party-*/`, 2~8명)
 
 커플 게임은 자리가 둘이라 `room-kit` 를 그대로 두고, 여덟 자리 **`netlify/lib/party-kit.mjs`** 를 따로 만들었다(2026-10, 탕비실 요청
-"향신료·탐험대·빙고를 2~8인으로, 모노폴리도"). 위에 올라간 게임 넷: `party-bingo` · `party-spice` · `party-expedition` · `party-marble`.
+"향신료·탐험대·빙고를 2~8인으로, 모노폴리도"). 위에 올라간 게임: `party-bingo` · `party-spice` · `party-expedition` · `party-marble` + (팀전과 함께, 2026-10) `party-gomoku`(팀 오목) ·
+`party-balance`(이심전심) · `party-wordbingo`(단어 빙고).
 
 - **흐름**: 방 만들기(방장, 최대 인원 2~8, AI 수) → 코드로 들어오기 / 방장이 `addbot`·`removebot` → 방장이 `start` → 게임 → 끝 → `restart`.
   `create` 에 `bot:true` 면(탕비실 '혼자 하기' `?bot=1`) AI 하나와 바로 시작한다. 시작한 뒤엔 못 들어온다. 방장은 로비에서 못 나간다(방은 12시간 뒤 만료).
@@ -464,7 +469,19 @@ GRAV = 0.6          GRAB_HOLD = 20     (Z 꾹 → 안기, 약 0.33초)
   게임 페이지는 `Party.init({ game, title, rules, render(st, el, P), final })` 만 — `render` 는 play 단계 DOM 을 한 번 만들고 내용만 바꾼다.
   `P.act(action, body)`, `P.name(i)`, `P.color(i)`, `P.jo`, `P.toast`. `window.__party.st` 가 지금 상태(테스트용).
   ⚠️ `querySelector('#c+')` 같은 id 는 CSS 선택자로 못 쓴다 — 영문·숫자만. render 안 예외는 party.js 가 잡아 화면에 띄운다.
-- **테스트**: `node tools/party-smoke.js` (kit 규칙 + 네 게임을 2~8명·봇 섞어 끝까지, 비밀 노출 검사, 기권, 다시 하기). 브라우저는
+- **팀전** (모든 party 게임): `room.teams` 0(개인전)·2·3·4, `players[i].team`. 홈에서 고르고, 대기실에서 방장이 `teams{n}` ·
+  `setteam{seat,team}`(사람을 누르면 다음 팀) · `shuffleteams`. 들어오는 사람·AI 는 사람 적은 팀으로. 빈 팀이 있으면 `start` 거절.
+  - 차례: `turnSeat` 가 **팀을 번갈아** 돈다(빨강1 → 파랑1 → 빨강2 …). 인원이 적은 팀은 같은 사람이 더 자주 — 팀마다 차례 수를 같게.
+    선공이 기권해도 선공 팀부터 다음 자리가 이어받는다(안 그러면 팀 번갈기가 한 번 어긋난다 — 팀 오목에서 발견).
+  - 끝: kit 가 view 에 `team = { winners, scores, rank, members, mode }` 를 붙인다. `game.teamMode` 'sum'(기본, 팀원 rank 점수 합 —
+    향신료·탐험대·마블) | 'any'(winners 자리가 든 팀 — 빙고·단어 빙고·팀 오목·이심전심). 이심전심은 개인 점수 합이 팀원 수에 따라
+    불공평해서 'any' 로 두고 winners 에 '팀 일치 수 1등 팀 전원'을 넣는다. 한 팀만 남으면 끝은 `oneSideLeft(room, seats)`.
+  - 게임별: 마블 = 팀원 땅은 통행료 없음. 팀 오목 = `teamOptions: [2]`(팀전 전용), 선공 팀이 흑, 1:1(각자 한 팀)도 된다.
+  - 화면(party.js): 팀 줄 오른쪽 글자 = `cfg.teamScore(st, t, P)` 또는 'any' 면 `cfg.teamWinLabel`(기본 '승리', 빙고류 '빙고!'),
+    개인 순위 단위 `cfg.scoreUnit`. 이긴 팀이 남은 팀 전부면 '🤝 비겼어요'. 게임별 홈 옵션(금수·주제·문제 수)은 각 페이지가
+    `#pt-teams` 아래에 직접 끼워 넣는다(party.js 에 옵션 칸이 아직 없다). 단어 빙고 주제 목록은 core·2인용 페이지·party 페이지 세 군데.
+- **테스트**: `node tools/party-smoke.js` (kit 규칙·팀전 + 네 게임을 2~8명·봇 섞어 끝까지, 비밀 노출 검사, 기권, 다시 하기),
+  `tools/party-{gomoku,balance,wordbingo}-smoke.js`. 브라우저는
   `node tools/couple-dev.js` 뒤 `/party-<게임>/?bot=1` 로 혼자 한 판, 탭 둘로 코드 들어오기.
 - 탕비실(메신저)에는 이 넷을 복사해 빙고·향신료·탐험대의 2인용 대신 걸었다. 초대 코드는 2~8명 모두에게 같은 방식으로 간다.
 

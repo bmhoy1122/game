@@ -72,10 +72,14 @@ export function oneSideLeft(room, seats) {
 function teamOrder(room, act) {
   const teams = [...Array(room.teams)].map((_, t) => act.filter((i) => teamOf(room, i) === t)).filter((m) => m.length);
   if (!teams.length) return act;
-  let ft = teams.findIndex((m) => m.includes(room.first));
+  // 선공이 기권해도 선공의 팀부터 — 그 팀의 다음 자리 사람이 이어받는다 (안 그러면 팀 번갈기가 한 번 어긋난다)
+  const firstTeam = teamOf(room, room.first);
+  let ft = teams.findIndex((m) => teamOf(room, m[0]) === firstTeam);
   if (ft < 0) ft = 0;
   const rot = [...teams.slice(ft), ...teams.slice(0, ft)];
-  const lead = rot[0], li = Math.max(0, lead.indexOf(room.first));
+  const lead = rot[0];
+  let li = lead.findIndex((i) => i >= room.first);
+  if (li < 0) li = 0;
   rot[0] = [...lead.slice(li), ...lead.slice(0, li)];
   const width = Math.max(...rot.map((m) => m.length)), order = [];
   for (let r = 0; r < width; r++) for (const m of rot) order.push(m[r % m.length]);

@@ -190,6 +190,9 @@ const lib = (f) => import(path.join(__dirname, '..', 'netlify/lib', f));
       const uneven = { players: [{ team: 0 }, { team: 0 }, { team: 0 }, { team: 1 }], teams: 2, first: 0, out: [false, false, false, false] };
       const us = [...Array(6)].map((_, k) => K.turnSeat(uneven, k));
       check('팀: 인원이 달라도 팀끼리 번갈아 (작은 팀은 같은 사람이 더 자주)', JSON.stringify(us) === '[0,3,1,3,2,3]', JSON.stringify(us));
+      const quit = { ...uneven, first: 1, out: [false, true, false, false] };   // 선공(빨강 1번 자리)이 기권
+      const qs = [...Array(4)].map((_, k) => K.turnSeat(quit, k));
+      check('팀: 선공이 기권해도 선공 팀부터 번갈아', JSON.stringify(qs) === '[2,3,0,3]', JSON.stringify(qs));
       check('팀: oneSideLeft — 같은 팀만 남으면 true', K.oneSideLeft(uneven, [0, 2]) && !K.oneSideLeft(uneven, [0, 3]) && !K.oneSideLeft({ teams: 0, players: [] }, [0, 2]));
       // 끝까지 — 팀 점수는 팀원 합
       let guard = 0;

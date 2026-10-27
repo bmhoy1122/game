@@ -240,7 +240,9 @@
         if (st.teams && st.team) {
           const tw = st.team.winners, myTeam = st.players[S.you] && st.players[S.you].team;
           const tn = tw.map((k) => TEAM_ICONS[k] + ' ' + TEAM_NAMES[k]);
-          $('pt-winner').textContent = (tw.includes(myTeam) ? '🎉 ' : '') + (tn.length > 1 ? tn.join(' · ') + ' 공동 우승' : tn[0] + ' 우승') + (tw.includes(myTeam) ? ' — 우리 팀!' : '');
+          const aliveTeams = st.team.scores.filter((v) => v !== null).length;
+          $('pt-winner').textContent = tw.length > 1 && tw.length === aliveTeams ? '🤝 비겼어요'
+            : (tw.includes(myTeam) ? '🎉 ' : '') + (tn.length > 1 ? tn.join(' · ') + ' 공동 우승' : tn[0] + ' 우승') + (tw.includes(myTeam) ? ' — 우리 팀!' : '');
           $('pt-tres').innerHTML = st.team.rank.map((r) => `<div class="r" style="background:${TEAM_COLORS[r.i]}"><b>${r.rank}등</b>${TEAM_ICONS[r.i]} ${TEAM_NAMES[r.i]} <small>${st.team.members[r.i].map((i) => esc(P.name(i))).join(' · ')}</small><span class="sc">${esc(cfg.teamScore ? cfg.teamScore(st, r.i, P) : st.team.mode === 'any' ? (r.s ? (cfg.teamWinLabel || '승리') : '') : r.s)}</span></div>`).join('');
           $('pt-tres').classList.remove('hide');
         } else {

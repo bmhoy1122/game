@@ -14,6 +14,7 @@
 | `couple-tiles/` | 비밀 타일 — 다빈치 코드 방식 숫자 타일 추리 | `/api/tiles` |
 | `couple-expedition/` | 탐험대 — 로스트 시티 방식 카드 게임 (탐험로에 오름차순으로 쌓기) | `/api/expedition` |
 | `couple-backgammon/` | 백개먼 — 주사위로 말 15개 먼저 빼내기 | `/api/backgammon` |
+| `party-*/` | 여럿이(2~8명, AI 여럿, 팀전) — 빙고·향신료 시장·탐험대·마블·팀 오목·이심전심·단어 빙고 | `/api/party-<게임>` |
 
 ```
 /                       허브(게임 목록)  → https://<사이트>.netlify.app/
@@ -96,6 +97,7 @@ node tools/baseball-smoke.js   # 숫자야구 규칙
 node tools/gomoku-smoke.js     # 오목 규칙
 node tools/pick-smoke.js       # 선 정하기
 node tools/bot-smoke.js        # 혼자 하기(AI)
+node tools/party-smoke.js      # 여럿이 하는 방(party-kit·팀전) + 빙고·향신료·탐험대·마블
 node tools/spice-smoke.js      # 향신료 시장 (tiles · expedition · backgammon · wordbingo 도 같은 이름)
                                # ← 전부 npm install 없이 돈다
 node tools/couple-dev.js       # 커플 게임 아홉을 끝까지 돌려보는 서버 (8787)
