@@ -11,7 +11,8 @@
  * 게임 상태는 그 뒤에 섞여 온다 (stage: setup|play|done, turn, yourTurn, winners, rank …).
  *
  * 홈(이름·인원·AI·만들기·들어가기) → 대기실(코드·사람들·AI 넣기·시작) → 게임(#game) → 끝(순위·다시 하기)
- * 폴링 1.4초(화면 숨기면 3.2초). 버튼 DOM 은 한 번만 만든다. ?name= ?code= ?bot=1 과 tellOpener 는 커플 게임과 같다.
+ * 폴링 1.4초(화면 숨기면 3.2초). 버튼 DOM 은 한 번만 만든다. ?name= ?code= 와 tellOpener 는 커플 게임과 같고,
+ * ?bot=1&bots=N 은 AI N 명(기본 3)과 바로 시작한다. 홈의 혼자 하기도 'AI 상대' 셀렉트 수만큼(없음이면 3명).
  */
 (function () {
   const POLL_MS = 1400, POLL_SLOW_MS = 3200;
@@ -91,7 +92,7 @@
         <div style="height:10px"></div>
         <button type="button" class="primary" id="pt-create">새 방 만들기</button>
         <div style="height:8px"></div>
-        <button type="button" class="ghost" id="pt-solo">🤖 혼자 하기 (AI 상대와 바로 시작)</button>
+        <button type="button" class="ghost" id="pt-solo">🤖 혼자 하기 (AI 3명과 바로 시작)</button>
         <h2 style="margin-top:18px">코드로 들어가기</h2>
         <input id="code" inputmode="numeric" maxlength="4" placeholder="0000" autocomplete="off">
         <div style="height:8px"></div>
@@ -117,6 +118,10 @@
     const $ = (id) => document.getElementById(id);
     for (let m = 2; m <= 8; m++) $('pt-max').insertAdjacentHTML('beforeend', `<option value="${m}" ${m === (cfg.maxDefault || 4) ? 'selected' : ''}>${m}명</option>`);
     for (let b = 0; b <= 7; b++) $('pt-bots').insertAdjacentHTML('beforeend', `<option value="${b}">${b ? b + '명' : '없음'}</option>`);
+    // 혼자 하기는 AI 가 최소 한 명 — 셀렉트 '없음'이면 3명으로 친다. 버튼 글자에 몇 명과 시작하는지 보여준다
+    const soloBots = () => Math.max(1, +$('pt-bots').value || 3);
+    const paintSolo = () => { $('pt-solo').textContent = '🤖 혼자 하기 (AI ' + soloBots() + '명과 바로 시작)'; };
+    $('pt-bots').addEventListener('change', paintSolo); paintSolo();
 
     let S = { code: null, token: null, you: null, name: '' };
     let st = null, timer = null, busy = false, toldCode = null, toastT = null;
@@ -217,7 +222,7 @@
     /* 버튼 */
     const nameNow = () => { S.name = $('pt-name').value.trim(); return S.name; };
     $('pt-create').onclick = () => act(async () => { nameNow(); adopt(await api('create', { name: S.name, max: +$('pt-max').value, bots: +$('pt-bots').value, ...(cfg.options ? cfg.options() : {}) })); });
-    $('pt-solo').onclick = () => act(async () => { nameNow(); adopt(await api('create', { name: S.name, max: Math.max(2, +$('pt-max').value), bot: true, ...(cfg.options ? cfg.options() : {}) })); });
+    $('pt-solo').onclick = () => act(async () => { nameNow(); const bots = soloBots(); adopt(await api('create', { name: S.name, max: Math.max(bots + 1, +$('pt-max').value), bot: true, bots, ...(cfg.options ? cfg.options() : {}) })); });
     $('pt-join').onclick = () => act(async () => { const c = $('code').value.trim(); if (!/^\d{4}$/.test(c)) throw new Error('네 자리 숫자를 넣어주세요'); nameNow(); S.code = c; adopt(await api('join', { code: c, name: S.name })); });
     ['pt-name', 'code'].forEach((id) => $(id).addEventListener('keydown', (e) => { if (e.key === 'Enter') $(id === 'code' ? 'pt-join' : 'pt-create').click(); }));
     $('pt-addbot').onclick = () => P.act('addbot'); $('pt-rmbot').onclick = () => P.act('removebot'); $('pt-start').onclick = () => P.act('start');
@@ -236,6 +241,7 @@
       show('pt-home');
       const q = new URLSearchParams(location.search);
       const urlCode = q.get('code'), urlName = (q.get('name') || '').trim().slice(0, 8), urlBot = q.get('bot') === '1';
+      const urlBots = Math.max(1, Math.min(7, parseInt(q.get('bots'), 10) || 3));          // ?bot=1&bots=N — 탕비실에서 AI 수를 골라 옴 (기본 3)
       let saved = null;
       try { saved = JSON.parse(localStorage.getItem(SAVE) || 'null'); } catch (e) {}
       if (saved && saved.name) { S.name = saved.name; $('pt-name').value = saved.name; }
@@ -244,7 +250,7 @@
         S.code = saved.code; S.token = saved.token;
         try { adopt(await api('state')); return; } catch (e) { forget(); }
       }
-      if (urlBot) { history.replaceState(null, '', location.pathname); render(); $('pt-solo').click(); return; }
+      if (urlBot) { history.replaceState(null, '', location.pathname); $('pt-bots').value = String(urlBots); paintSolo(); render(); $('pt-solo').click(); return; }
       if (urlCode && /^\d{4}$/.test(urlCode)) { $('code').value = urlCode; $('pt-sub').textContent = '초대받은 방 ' + urlCode + ' · 이름을 넣고 들어가요'; }
       render();
     })();

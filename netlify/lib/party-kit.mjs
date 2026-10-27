@@ -100,9 +100,10 @@ export async function handleParty(game, body, store, now = Date.now()) {
     const token = crypto.randomUUID();
     const room = { code, created: now, round: 1, max, phase: 'lobby', host: 0, players: [{ token, name: cleanName(body.name) }], out: [], lastAt: now };
     room.opts = game.options ? game.options(body || {}) : {};
-    let bots = Number(body.bots) || (body.bot ? 1 : 0);
+    let bots = Math.max(0, Math.min(MAX_SEATS - 1, Number(body.bots) || 0));
+    if (body.bot) { bots = Math.max(1, bots); if (max < bots + 1) { max = bots + 1; room.max = max; } }   // 혼자 하기 — AI 수만큼 자리를 늘린다
     for (let i = 0; i < bots && room.players.length < max; i++) room.players.push({ token: null, name: BOT_NAME + (i ? ' ' + (i + 1) : ''), bot: true });
-    if (body.bot && room.players.length >= MIN_SEATS) begin(room);          // 탕비실 '혼자 하기' — AI 하나와 바로 시작
+    if (body.bot && room.players.length >= MIN_SEATS) begin(room);          // 탕비실·홈 '혼자 하기' — AI 들과 바로 시작
     await store.set(roomKey(code), room);
     return ok(await load(room, 0), { token });
   }
