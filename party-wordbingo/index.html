@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1">
+<meta name="theme-color" content="#1d3440">
+<title>여럿이 단어 빙고</title>
+<style>
+  :root{--accent:#2f8f8a;--soft:#e6f4f1;--ink:#24535a;--mute:#5b8a8f;--line:#c8e3dd;
+    --bg:radial-gradient(130% 80% at 50% 0%,#e3f6d8 0%,#9fd9c8 36%,#4f9aa8 70%,#1d3440 100%);
+    --pk-accent:#2f8f8a;--pk-soft:#eef8f5;--pk-ink:#24535a;--pk-line:#c8e3dd}
+  /* 홈: 방 설정 */
+  .wo{margin-top:6px}
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chips button{padding:8px 10px;font-size:13px;border-radius:11px;background:#eef8f5;color:#2b6a6d;border:2px solid transparent;flex:none}
+  .chips button.on{border-color:#2f8f8a;background:#fff;color:#1f6f6a}
+  .chips.even button{flex:1}
+  #wotext{margin-top:8px;text-align:left}
+  .hint{font-size:12px;font-weight:700;color:#5b8a8f;margin:6px 0 0;line-height:1.5}
+
+  .topicbar{display:flex;align-items:center;gap:8px;background:#f0faf7;border-radius:14px;padding:9px 12px;font-weight:800;font-size:14px;color:#24535a}
+  .topicbar .ic{font-size:20px} .topicbar .tl{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .topicbar .r{margin-left:auto;font-size:12px;color:#5b8a8f;white-space:nowrap}
+
+  /* 단어 쓰기 */
+  .wgrid{display:grid;gap:5px}
+  .wgrid input{padding:4px 2px;border-radius:10px;font-size:clamp(12px,3.4vw,15px);aspect-ratio:1;min-width:0;border:2px solid #d4ebe6;background:#fbfefd;letter-spacing:-.3px}
+  .wgrid.s3 input{font-size:clamp(15px,4.6vw,19px)}
+  .wgrid input.long{font-size:clamp(10px,2.7vw,12px);letter-spacing:-.6px}
+  .wgrid input.dup{border-color:#e0605a;background:#fff2f1}
+  .wgrid input:disabled{opacity:1;color:#23414d;background:#eef8f5;-webkit-text-fill-color:#23414d}
+  .count{font-size:12.5px;font-weight:800;color:#5b8a8f;text-align:right;margin:6px 2px 0}
+  .waitl{font-size:12.5px;font-weight:700;color:#5b8a8f;text-align:center;margin:10px 0 0;line-height:1.5}
+
+  /* 게임 판 */
+  .wb{display:grid;gap:5px}
+  .cell{aspect-ratio:1;border-radius:11px;background:#f4fbf9;color:#24535a;font-weight:800;display:flex;align-items:center;justify-content:center;text-align:center;padding:2px;line-height:1.15;
+    border:2px solid #d4ebe6;word-break:keep-all;overflow-wrap:anywhere;overflow:hidden;transition:background .18s,color .18s,transform .12s;font-size:clamp(11px,3.3vw,15px);min-width:0;user-select:none}
+  .wb.s3 .cell{font-size:clamp(15px,4.6vw,20px)} .wb.s4 .cell{font-size:clamp(13px,3.9vw,17px)}
+  .cell.long{font-size:clamp(10px,2.8vw,13px)}
+  .cell.hit{background:linear-gradient(140deg,#5fc6b3,#2f8f8a);color:#fff;border-color:#2f8f8a;transform:scale(.96)}
+  .cell.line{background:linear-gradient(140deg,#ffd27a,#f6a93b);border-color:#f0a033;color:#5e3a12}
+  .cell.last{box-shadow:0 0 0 3px #fff,0 0 0 6px #e0605a}
+  .cell.pick{cursor:pointer} .cell.pick:active{transform:scale(.9)}
+  .lastw{text-align:center;margin-top:10px}
+  .lastw .w{font-size:28px;font-weight:900;color:#2f8f8a;line-height:1.15;word-break:keep-all}
+  .lastw .w.none{font-size:17px;color:#a9c8c5}
+  .lastw .t{font-size:12px;font-weight:700;color:#5b8a8f}
+  .cnt{display:inline-block;margin-left:5px;font-size:12px;font-weight:900;color:#d24f6e;background:#ffe8ee;border-radius:8px;padding:2px 6px;vertical-align:4px;white-space:nowrap}
+  .cnt.one{color:#5b8a8f;background:#eef8f5}
+  .mini{display:flex;flex-direction:column;gap:6px}
+  .mini .r{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:700;min-width:0}
+  .mini .nm{max-width:42%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .mini .bar{flex:1;height:8px;border-radius:4px;background:#e9eef6;overflow:hidden;min-width:30px}
+  .mini .bar i{display:block;height:100%;background:var(--accent)}
+  .mini .r.turn{color:#7a4a00} .mini .r.turn .bar i{background:#f6a93b}
+  .tsq{width:10px;height:10px;border-radius:3px;flex:none}
+  .wlog{display:flex;flex-direction:column;gap:5px;max-height:200px;overflow-y:auto}
+  .wlog div{background:#f4fbf9;border-radius:10px;padding:7px 10px;font-size:13px;font-weight:700;color:#3d5f66}
+  .wlog div b{color:#1f6f6a}
+
+  /* 끝 화면 */
+  .shared{text-align:left;margin:4px 0 10px;font-size:13px;font-weight:700;color:#3d5f66;line-height:1.7}
+  .shared h4{margin:6px 0 4px;font-size:13px;color:#2b6a6d}
+  .shared .sw{display:inline-block;background:#eef8f5;border-radius:8px;padding:1px 7px;margin:2px 3px 2px 0}
+  .shared .sw small{color:#d24f6e;font-weight:900}
+  .fboards{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:8px 0 12px;text-align:left}
+  .fboards .nm{font-size:12px;font-weight:800;color:#2b6a6d;margin-bottom:4px;display:flex;align-items:center;gap:4px;min-width:0}
+  .fboards .nm span.t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .fboards .wb{gap:2px}
+  .fboards .cell{border-radius:5px;font-size:9px;border-width:1px;transform:none;padding:1px;letter-spacing:-.4px;line-height:1.05}
+  .fboards .wb.s3 .cell{font-size:12px} .fboards .wb.s4 .cell{font-size:10px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script src="../couple-common/rules.js"></script>
+<script src="../party-common/party.js"></script>
+<script>
+/* 여럿이 단어 빙고 — 규칙은 netlify/lib/party-wordbingo-core.mjs (주제·norm·판 검사는 wordbingo-core.mjs) 가 정답이다.
+ * 화면은 couple-wordbingo 의 단어 쓰기 칸·판 그리기를 party.js 위에 옮긴 것. 주제 이름·아이콘은 core 의 TOPICS 와 맞춘다. */
+const SAVE = 'party-wordbingo';
+const TOPICS = [
+  ['fruit', '🍎', '과일'], ['animal', '🐶', '동물'], ['food', '🍜', '음식'], ['country', '🌏', '나라'],
+  ['subway', '🚇', '서울 지하철역'], ['job', '🧑‍🍳', '직업'], ['sport', '⚽', '운동'], ['snack', '🍪', '간식'],
+  ['trip', '✈️', '같이 가고 싶은 곳'], ['date', '💕', '데이트 하고 싶은 것'], ['custom', '✏️', '직접 쓰기'],
+];
+const DEFAULT_LINES = { 3: 1, 4: 2, 5: 3 };
+const norm = (w) => String(w || '').normalize('NFC').replace(/\s+/g, '').toLowerCase();
+function linesFor(size) {
+  const out = [];
+  for (let r = 0; r < size; r++) out.push([...Array(size)].map((_, c) => r * size + c));
+  for (let c = 0; c < size; c++) out.push([...Array(size)].map((_, r) => r * size + c));
+  out.push([...Array(size)].map((_, i) => i * size + i));
+  out.push([...Array(size)].map((_, i) => i * size + (size - 1 - i)));
+  return out;
+}
+
+const RULES = `
+<h3>한눈에</h3><p><b>주제에 맞는 단어로 내 빙고판을 채우고, 차례대로 단어를 불러서 줄을 먼저 지우면 이겨요.</b> 2~8명.
+숫자 빙고랑 같은데 칸에 숫자 대신 <b>내가 쓴 단어</b>가 들어가요. 부른 단어는 <b>그 단어를 쓴 모든 사람 판</b>에서 지워져요.</p>
+<h3>준비</h3><ul>
+<li>방장이 <b>주제</b>(과일·동물…·직접 쓰기), <b>판 크기</b>(3×3 · 4×4 · 5×5), <b>몇 줄 먼저</b>를 골라 방을 만들어요.</li>
+<li>모두 각자 판에 주제에 맞는 단어를 칸마다 하나씩 써요. 같은 단어는 두 번 못 써요(빨간 칸). 남의 판은 안 보여요.</li>
+<li>생각이 안 나면 <b>✨ 빈칸 채우기</b>(직접 쓰는 주제엔 없어요). 다 쓰면 <b>준비 완료</b>. 모두 준비하면 시작해요.</li></ul>
+<h3>내 차례</h3><ol>
+<li>내 판에서 아직 안 지워진 칸을 하나 눌러요. 그 단어를 부르는 거예요.</li>
+<li>그 단어가 내 판에서 지워지고, <b>다른 사람 판에 똑같은 단어가 있으면 거기서도 지워져요.</b> 띄어쓰기·대소문자는 상관없어요.</li>
+<li>기록에 <b>👥 몇 명</b>이 그 단어를 썼는지 나와요. 그리고 다음 사람 차례.</li></ol>
+<h3>끝</h3><p>가로·세로·대각선 한 줄이 다 지워지면 1줄. 정한 줄 수를 <b>먼저</b> 채우면 이겨요. 같은 차례에 여럿이 채우면 공동 우승.
+끝나면 모든 사람 판과 <b>여럿이 같이 쓴 단어</b>가 공개돼요.</p>
+<h3>팀전일 때</h3><p>차례는 팀을 번갈아 돌아요(빨강1 → 파랑1 → 빨강2 …). <b>팀원 중 누구든</b> 목표 줄을 먼저 채우면 그 팀이 이겨요.
+판은 팀원끼리도 각자 따로 써요 — 우리 팀 사람이 부른 단어가 내 판에도 있으면 같이 지워지니, 팀원끼리 흔한 단어를 쓰면 유리해요.</p>
+<div class="rl-ex">예) 주제 '과일', 4명. 내가 <b>수박</b>을 부르면 수박을 쓴 사람 판에서 다 지워져요. 셋이 썼으면 기록에 <b>👥 3명</b>.
+'수 박'처럼 띄어 썼어도 같은 단어지만, '수박'과 '씨없는수박'은 다른 단어예요.</div>
+<h3>팁</h3>
+<div class="rl-tip">남들도 쓸 것 같은 <b>흔한 단어</b>를 쓰면 남이 부를 때 내 칸도 같이 지워져요. 대신 남의 판도 같이 지워지니 양날의 칼!</div>
+<div class="rl-tip">나만 쓸 것 같은 단어는 내가 직접 불러야만 지워져요. 줄 하나를 노릴 땐 그 줄 단어부터 불러요.</div>
+<div class="rl-tip">'같이 가고 싶은 곳' 같은 주제는 끝나고 서로 판을 구경하는 게 진짜 재미예요.</div>`;
+
+/* ---------------------------------------------------------------- 방 설정 (홈 카드 안에 끼워 넣는다)
+   고른 값은 그 폰에 기억한다. 서버가 options() 로 다시 거른다. */
+const OPT_SAVE = SAVE + ':opts';
+let opt = { topic: 'fruit', topicText: '', size: 5, lines: 3 };
+try { Object.assign(opt, JSON.parse(localStorage.getItem(OPT_SAVE) || '{}')); } catch (e) {}
+function options() {
+  if (opt.topic === 'custom' && !String(opt.topicText || '').trim()) { const x = document.getElementById('wotext'); if (x) x.focus(); throw new Error('주제를 써주세요'); }
+  return { topic: opt.topic, topicText: opt.topicText, size: opt.size, lines: opt.lines };
+}
+function mountOptions(P) {
+  const box = document.createElement('div');
+  box.className = 'wo';
+  box.innerHTML = `<div class="lbl">주제</div><div class="chips" id="wotopics"></div>
+    <input id="wotext" class="hide" maxlength="20" placeholder="주제를 써요 (예: 우리가 같이 본 영화)" autocomplete="off">
+    <div class="row" style="align-items:flex-start;margin-top:2px"><div><div class="lbl">판 크기</div><div class="chips even" id="wosizes"></div></div></div>
+    <div class="lbl">몇 줄 먼저?</div><div class="chips even" id="wogoals"></div>
+    <p class="hint" id="wohint"></p>`;
+  P.$('pt-create').parentNode.insertBefore(box, P.$('pt-create').previousElementSibling);
+  const mk = (el, items, onPick) => items.map(([v, label]) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = label; b.dataset.v = v; b.onclick = () => onPick(v); el.appendChild(b); return b; });
+  const tb = mk(P.$('wotopics'), TOPICS.map(([id, ic, lb]) => [id, ic + ' ' + lb]), (v) => { opt.topic = v; draw(); if (v === 'custom') P.$('wotext').focus(); });
+  const sb = mk(P.$('wosizes'), [[3, '3×3'], [4, '4×4'], [5, '5×5']], (v) => { opt.size = v; opt.lines = DEFAULT_LINES[v]; draw(); });
+  const gb = mk(P.$('wogoals'), [1, 2, 3, 4, 5].map((n) => [n, n + '줄']), (v) => { opt.lines = v; draw(); });
+  P.$('wotext').value = opt.topicText || '';
+  P.$('wotext').addEventListener('input', () => { opt.topicText = P.$('wotext').value; draw(); });
+  function draw() {
+    tb.forEach((b) => b.classList.toggle('on', b.dataset.v === opt.topic));
+    sb.forEach((b) => b.classList.toggle('on', +b.dataset.v === opt.size));
+    gb.forEach((b) => b.classList.toggle('on', +b.dataset.v === opt.lines));
+    P.$('wotext').classList.toggle('hide', opt.topic !== 'custom');
+    P.$('wohint').textContent = `${opt.size}×${opt.size} 판에 단어 ${opt.size * opt.size}개를 써요. 가로·세로·대각선 ${opt.lines}줄을 먼저 지우면 이겨요.`;
+    try { localStorage.setItem(OPT_SAVE, JSON.stringify(opt)); } catch (e) {}
+  }
+  draw();
+}
+
+/* ---------------------------------------------------------------- 게임 화면 — 한 번만 만들고 내용만 바꾼다 */
+let built = false, wInputs = [], wSize = 0, gridKey = '', lastSeen = -1, pBoard = null;
+const draftKey = (st) => SAVE + ':draft:' + st.code + ':' + st.round;
+function topicBar(st, P) {
+  return `<span class="ic">${P.esc(st.topic.icon)}</span><span class="tl">${P.esc(st.topic.label)}</span><span class="r">${st.size}×${st.size} · ${st.winLines}줄 먼저</span>`;
+}
+const cntTag = (c) => `<span class="cnt${c > 1 ? '' : ' one'}">👥 ${c}명</span>`;
+
+/* 판 그리기 — 칸은 크기가 바뀔 때만 만든다 (폴링 때마다 갈면 누르는 도중 탭이 씹힌다) */
+function boardView(el, onPick) {
+  let cells = [], size = 0;
+  return {
+    draw(board, sz, called, o) {
+      o = o || {};
+      if (sz !== size) {
+        el.textContent = ''; el.style.gridTemplateColumns = `repeat(${sz},minmax(0,1fr))`;
+        el.className = 'wb s' + sz;
+        cells = [...Array(sz * sz)].map((_, i) => { const d = document.createElement('div'); d.onclick = () => { if (onPick && d.classList.contains('pick')) onPick(i); }; el.appendChild(d); return d; });
+        size = sz;
+      }
+      cells.forEach((d, i) => {
+        const w = board ? board[i] : '';
+        if (d.textContent !== w) d.textContent = w;
+        d.className = cellClass(board, sz, called, i, o);
+      });
+    },
+  };
+}
+function cellClass(board, sz, called, i, o) {
+  const keys = new Set((called || []).map((c) => norm(c.w)));
+  const w = board ? board[i] : '';
+  const hit = keys.has(norm(w));
+  let line = false;
+  if (board && hit) for (const ln of linesFor(sz)) if (ln.includes(i) && ln.every((j) => keys.has(norm(board[j])))) { line = true; break; }
+  return 'cell' + (w.length > 5 ? ' long' : '') + (hit ? ' hit' : '') + (line ? ' line' : '') + (o.last && norm(w) === norm(o.last) ? ' last' : '') + (o.pickable && !hit ? ' pick' : '');
+}
+
+function build(el, P) {
+  el.innerHTML = `
+    <div class="banner" id="wbn"></div>
+    <section class="card" id="wsu">
+      <div class="topicbar" id="wtopic1"></div>
+      <h2 style="margin:12px 0 8px">내 판 — 칸마다 단어 하나씩</h2>
+      <div class="wgrid" id="wgrid"></div>
+      <p class="count" id="wcount"></p>
+      <div style="height:8px"></div>
+      <div class="row"><button type="button" class="ghost" id="wfill">✨ 빈칸 채우기</button><button type="button" class="ghost" id="wclear">다 지우기</button></div>
+      <div style="height:8px"></div>
+      <button type="button" class="primary" id="wready">준비 완료</button>
+      <p class="waitl" id="wwait"></p>
+      <p class="hint" style="text-align:center">남이 쓴 단어랑 <b>똑같이</b> 써야 같이 지워져요. 띄어쓰기는 상관없어요.</p>
+    </section>
+    <section class="card" id="wpl1">
+      <div class="topicbar" id="wtopic2"></div>
+      <div class="lastw"><div class="w none" id="wlast">아직 없어요</div><div class="t" id="wlastt">마지막으로 부른 단어</div></div>
+    </section>
+    <section class="card" id="wpl2"><div id="wboard" class="wb"></div></section>
+    <section class="card" id="wpl3"><h2>줄 수</h2><div class="mini" id="wmini"></div></section>
+    <section class="card" id="wpl4"><h2>부른 단어</h2><div class="wlog" id="wlog"></div></section>`;
+  pBoard = boardView(el.querySelector('#wboard'), (i) => P.act('call', { i }));
+  const $ = (id) => el.querySelector('#' + id);
+  $('wfill').onclick = () => {
+    const st = P.st; if (!st || !st.suggest) return;
+    const used = new Set(wInputs.map((x) => norm(x.value)).filter(Boolean));
+    const pool = st.suggest.filter((w) => !used.has(norm(w)));
+    for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
+    wInputs.forEach((x) => { if (!x.value.trim() && pool.length) x.value = pool.pop(); });
+    saveDraft(); checkInputs();
+  };
+  $('wclear').onclick = () => {
+    if (wInputs.some((x) => x.value.trim()) && !confirm('쓴 단어를 다 지울까요?')) return;
+    wInputs.forEach((x) => (x.value = '')); saveDraft(); checkInputs();
+  };
+  $('wready').onclick = () => {
+    const c = checkInputs(), st = P.st;
+    if (c.filled < c.n) { P.err(`아직 ${c.n - c.filled}칸이 비어 있어요` + (st.suggest ? ' — ✨ 빈칸 채우기를 눌러도 돼요' : '')); const e = wInputs.find((x) => !x.value.trim()); if (e) e.focus(); return; }
+    if (c.dups) { P.err('같은 단어를 두 번 썼어요 (빨간 칸)'); return; }
+    P.act('ready', { board: wInputs.map((x) => x.value) });
+  };
+  built = true;
+}
+let curSt = null;
+function saveDraft() { if (!curSt) return; try { localStorage.setItem(draftKey(curSt), JSON.stringify(wInputs.map((x) => x.value))); } catch (e) {} }
+function loadDraft(st) { try { return JSON.parse(localStorage.getItem(draftKey(st)) || '[]'); } catch (e) { return []; } }
+function buildInputs(el, st) {
+  const g = el.querySelector('#wgrid');
+  g.textContent = ''; g.style.gridTemplateColumns = `repeat(${st.size},minmax(0,1fr))`; g.className = 'wgrid s' + st.size;
+  const draft = loadDraft(st);
+  wInputs = [...Array(st.size * st.size)].map((_, i) => {
+    const x = document.createElement('input');
+    x.maxLength = 10; x.autocomplete = 'off'; x.enterKeyHint = 'next'; x.placeholder = String(i + 1); x.value = draft[i] || '';
+    x.addEventListener('input', () => { saveDraft(); checkInputs(); });
+    x.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      const next = wInputs.slice(i + 1).find((y) => !y.value.trim()) || wInputs.find((y) => !y.value.trim());
+      if (next) next.focus(); else x.blur();
+    });
+    g.appendChild(x);
+    return x;
+  });
+  wSize = st.size;
+}
+function checkInputs() {
+  const keys = wInputs.map((x) => norm(x.value)), count = {};
+  keys.forEach((k) => { if (k) count[k] = (count[k] || 0) + 1; });
+  let filled = 0, dups = 0;
+  wInputs.forEach((x, i) => {
+    const dup = keys[i] && count[keys[i]] > 1;
+    x.classList.toggle('dup', !!dup);
+    x.classList.toggle('long', x.value.trim().length > (wSize === 3 ? 6 : 4));
+    if (keys[i]) filled++; if (dup) dups++;
+  });
+  const n = wInputs.length, btn = document.getElementById('wready');
+  document.getElementById('wcount').textContent = filled + '/' + n + '칸' + (dups ? ' · 같은 단어가 있어요 (빨간 칸)' : '');
+  if (curSt && !curSt.ready) { btn.disabled = false; btn.textContent = filled < n ? `준비 완료 (${n - filled}칸 남음)` : dups ? '같은 단어를 고쳐요' : '준비 완료'; }
+  return { filled, dups, n };
+}
+
+function render(st, el, P) {
+  if (!built) build(el, P);
+  curSt = st;
+  const $ = (id) => el.querySelector('#' + id);
+  const setup = st.stage === 'setup';
+  ['wsu'].forEach((id) => $(id).classList.toggle('hide', !setup));
+  ['wpl1', 'wpl2', 'wpl3', 'wpl4'].forEach((id) => $(id).classList.toggle('hide', setup));
+  const teamOf = (i) => P.team(i);
+  const teamIc = (i) => (st.teams && teamOf(i) !== null ? P.TEAM_ICONS[teamOf(i)] + ' ' : '');
+  const bn = $('wbn');
+
+  if (setup) {
+    $('wtopic1').innerHTML = topicBar(st, P);
+    const key = st.code + ':' + st.round;
+    if (gridKey !== key || wSize !== st.size || !wInputs.length) { buildInputs(el, st); gridKey = key; }
+    if (st.ready && st.board) wInputs.forEach((x, i) => { x.value = st.board[i]; });
+    wInputs.forEach((x) => (x.disabled = !!st.ready));
+    $('wfill').classList.toggle('hide', !st.suggest);
+    $('wfill').disabled = $('wclear').disabled = !!st.ready;
+    checkInputs();
+    if (st.ready) { $('wready').disabled = true; $('wready').textContent = '준비 완료 ✓'; }
+    const waiting = st.players.map((p, i) => ({ p, i })).filter(({ p, i }) => !p.out && !st.readyAll[i]).map(({ i }) => P.name(i));
+    const readyN = st.players.filter((p, i) => !p.out && st.readyAll[i]).length, all = st.players.filter((p) => !p.out).length;
+    bn.className = 'banner' + (st.ready ? '' : ' me');
+    bn.innerHTML = st.ready ? '<span class="dots">다른 사람이 쓰는 중</span>' : (st.suggest ? '칸마다 단어를 쓰고 준비 완료 (✨ 빈칸 채우기도 돼요)' : '칸마다 단어를 쓰고 준비 완료를 눌러요');
+    $('wwait').textContent = `준비 ${readyN}/${all}` + (waiting.length ? ' · 쓰는 중: ' + waiting.join(', ') : '');
+    return;
+  }
+
+  // 부르기
+  const last = st.called.length ? st.called[st.called.length - 1] : null;
+  $('wtopic2').innerHTML = topicBar(st, P);
+  bn.className = 'banner' + (st.yourTurn ? ' me' : '');
+  bn.innerHTML = st.yourTurn ? '내 차례 — 내 판에서 부를 단어를 눌러요'
+    : '<span class="dots">' + teamIc(st.turn) + P.esc(P.jo(P.name(st.turn), '이', '가')) + ' 고르는 중</span>';
+  $('wlast').innerHTML = last ? P.esc(last.w) + cntTag(last.count) : '아직 없어요';
+  $('wlast').className = 'w' + (last ? '' : ' none');
+  $('wlastt').textContent = last ? (last.by === st.you ? '내가 부른 단어' : P.jo(P.name(last.by), '이', '가') + ' 부른 단어') : '마지막으로 부른 단어';
+  pBoard.draw(st.board, st.size, st.called, { last: last && last.w, pickable: st.yourTurn });
+  $('wmini').innerHTML = st.players.map((p, i) => {
+    const l = st.lines[i];
+    return `<div class="r${st.turn === i ? ' turn' : ''}">${st.teams ? `<span class="tsq" style="background:${P.TEAM_COLORS[p.team]}"></span>` : ''}<span class="dot" style="width:10px;height:10px;border-radius:50%;flex:none;background:${P.color(i)}"></span><span class="nm">${P.esc(P.name(i))}${p.me ? ' (나)' : ''}${p.out ? ' (나감)' : ''}</span><div class="bar"><i style="width:${Math.min(100, ((l || 0) / st.winLines) * 100)}%"></i></div><b>${l == null ? '-' : l + '/' + st.winLines}</b></div>`;
+  }).join('');
+  const lg = $('wlog');
+  if (lg.dataset.n !== String(st.called.length) + ':' + st.round) {
+    lg.dataset.n = String(st.called.length) + ':' + st.round;
+    lg.innerHTML = st.called.length ? st.called.slice().reverse().map((c) => `<div>${P.esc(c.by === st.you ? '나' : P.name(c.by))} · <b>${P.esc(c.w)}</b>${cntTag(c.count)}</div>`).join('') : '<div>아직 아무도 안 불렀어요</div>';
+  }
+  if (st.called.length !== lastSeen) {
+    if (lastSeen >= 0 && st.called.length > lastSeen && last && last.by !== st.you) P.toast(P.name(last.by) + ': ' + last.w + (last.count > 1 ? ' · 👥 ' + last.count + '명' : ''));
+    lastSeen = st.called.length;
+  }
+}
+
+/* 끝 화면 — 여럿이 같이 쓴 단어 + 모든 판 */
+function final(st, P) {
+  lastSeen = -1;
+  let h = '<div class="shared"><h4>👥 여럿이 같이 쓴 단어</h4>';
+  h += st.shared && st.shared.length
+    ? st.shared.map((x) => `<span class="sw">${P.esc(x.w)} <small>${x.seats.length}명</small></span>`).join('')
+    : '<span>겹친 단어가 하나도 없었어요</span>';
+  h += '</div>';
+  if (st.boards) {
+    h += '<div class="fboards">' + st.boards.map((b, i) => {
+      if (!b) return '';
+      const cells = b.map((w, j) => `<div class="${cellClass(b, st.size, st.called, j, {})}">${P.esc(w)}</div>`).join('');
+      return `<div><div class="nm">${st.teams ? `<span class="tsq" style="background:${P.TEAM_COLORS[P.team(i)]}"></span>` : ''}<span class="dot" style="width:8px;height:8px;border-radius:50%;flex:none;background:${P.color(i)}"></span><span class="t">${P.esc(P.name(i))} · ${st.lines[i] == null ? '-' : st.lines[i]}줄</span></div>`
+        + `<div class="wb s${st.size}" style="grid-template-columns:repeat(${st.size},minmax(0,1fr))">${cells}</div></div>`;
+    }).join('') + '</div>';
+  }
+  return h;
+}
+
+const P = Party.init({
+  teamWinLabel: '빙고!', scoreUnit: '줄',
+  game: 'wordbingo', title: '여럿이 단어 빙고', emoji: '✏️', sub: '2~8명 · 주제를 정하고 각자 판에 단어를 써요', maxDefault: 4,
+  rules: { title: '✏️ 여럿이 단어 빙고 규칙', html: RULES },
+  options, render, final,
+});
+mountOptions(P);
+</script>
+</body>
+</html>

@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1">
+<meta name="theme-color" content="#3b2a1f">
+<title>팀 오목</title>
+<style>
+  :root{--accent:#b8562f;--soft:#f5e8da;--ink:#4a3524;--mute:#9a7458;--line:#ecdcc9;
+    --bg:radial-gradient(130% 80% at 50% 0%,#ffe6c7 0%,#e9b98c 38%,#a5704f 72%,#4a3020 100%);
+    --pk-accent:#b8562f;--pk-soft:#fbf1e6;--pk-ink:#6a3f22;--pk-mute:#9a7458;--pk-line:#e3cdb6}
+  body{background-attachment:fixed}
+  .stone{display:inline-block;width:16px;height:16px;border-radius:50%;flex:none;vertical-align:-3px}
+  .stone.black{background:radial-gradient(circle at 35% 30%,#666,#111 60%)}
+  .stone.white{background:radial-gradient(circle at 35% 30%,#fff,#d8d2c8 70%);box-shadow:inset 0 0 0 1px #b9b0a2}
+  .teams{display:flex;gap:8px}
+  .tbox{flex:1;min-width:0;border-radius:14px;padding:8px;background:#fbf1e6;border:2px solid transparent}
+  .tbox.on{border-color:#f0b660;background:#fff6e2;box-shadow:0 0 0 3px rgba(240,182,96,.25)}
+  .tbox .h{display:flex;align-items:center;gap:6px;font-weight:900;font-size:14px;color:#6a3f22;flex-wrap:wrap}
+  .tbox .h .tm{font-size:10px;padding:1px 6px}
+  .tbox .h .me{font-size:11px;color:#b8562f}
+  .mem{display:flex;flex-direction:column;gap:3px;margin-top:6px}
+  .mem div{display:flex;align-items:center;gap:5px;font-size:12.5px;font-weight:700;color:#6a3f22;padding:3px 5px;border-radius:8px;min-width:0}
+  .mem div span.n{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mem div.now{background:#ffd98a;color:#5a3a10}
+  .mem div.out{opacity:.45;text-decoration:line-through}
+  .mem .d{width:9px;height:9px;border-radius:50%;flex:none}
+  .order{display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin-top:8px;font-size:12px;font-weight:800;color:#9a7458}
+  .order .o{display:inline-flex;align-items:center;gap:4px;padding:3px 7px;border-radius:999px;background:#f5e8da;color:#6a3f22;max-width:42%}
+  .order .o span.n{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .order .o.now{background:#ffd98a}
+  .order .o.mine{box-shadow:inset 0 0 0 2px #b8562f}
+  .order .o .stone{width:12px;height:12px;vertical-align:0}
+  .board-wrap{padding:6px;border-radius:14px;background:linear-gradient(135deg,#f1c98f,#e2ad6c);box-shadow:inset 0 0 0 2px #c98f52}
+  #gboard{display:block;width:100%;height:auto;touch-action:manipulation;user-select:none;-webkit-user-select:none}
+  .hint{font-size:12px;font-weight:700;color:#a08066;text-align:center;margin:8px 0 0}
+  .rline{font-size:11.5px;font-weight:700;color:#a08066;text-align:center;margin:4px 0 0}
+  .lastmv{display:inline-flex;align-items:center;gap:4px}
+  .lastmv i{width:9px;height:9px;border-radius:50%;display:inline-block}
+  /* 홈 — 금수 고르기 */
+  .presets{display:flex;gap:6px}
+  .presets button{flex:1;padding:9px 4px;font-size:13px;border-radius:12px}
+  .presets button.on{background:linear-gradient(135deg,#d97a4a,#b8562f);color:#fff}
+  table.grules{width:100%;border-collapse:separate;border-spacing:0 5px;margin-top:4px}
+  table.grules th{font-size:12px;color:#9a7458;font-weight:800;padding:0}
+  table.grules td{text-align:center}
+  table.grules td:first-child{text-align:left;font-weight:800;font-size:14px;color:#6a3f22}
+  table.grules td small{display:block;font-size:11px;color:#a08066;font-weight:700}
+  .ck{width:46px;height:36px;padding:0;border-radius:11px;background:#f5e8da;color:transparent;font-size:18px;box-shadow:inset 0 0 0 2px #ecdcc9}
+  .ck.on{background:#c0392b;color:#fff;box-shadow:none}
+  .rule-note{font-size:12px;font-weight:700;color:#9a7458;margin:4px 0 0;line-height:1.5}
+  .teamnote{font-size:12px;font-weight:700;color:#9a7458;margin:4px 0 0;text-align:center}
+  /* 끝 화면 */
+  .fin{font-size:13px;font-weight:700;color:#6a3f22;margin:4px 0 8px;line-height:1.55}
+  .fin svg{width:100%;max-width:300px;height:auto;display:block;margin:6px auto 10px;border-radius:12px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script src="../couple-common/rules.js"></script>
+<script src="../party-common/party.js"></script>
+<script>
+/* 팀 오목 — 흑팀 · 백팀이 팀원끼리 한 명씩 돌아가며 둔다. 규칙은 netlify/lib/party-gomoku-core.mjs 가 정답.
+   판(SVG)·미리보기 두 번 탭·금수 ×·금수 고르기는 couple-gomoku 에서 가져왔다. */
+const RULES = `
+<h3>한눈에</h3><p><b>흑팀 ⚫ 과 백팀 ⚪</b> 으로 나눠서 하는 오목이에요. 15×15 판에 돌을 하나씩 두고, 가로·세로·대각선으로 <b>다섯 개</b>를 먼저 이은 팀이 이겨요. 팀원끼리 <b>한 명씩 돌아가며</b> 두기 때문에, 내 생각과 다른 곳에 팀원이 둘 수도 있어요 — 그게 재미예요.</p>
+<h3>준비</h3><p>방을 만들 때 <b>금수</b>(못 두는 자리)를 골라요. 기본은 세이클럽식(흑백 모두 삼삼 금지, 여섯 개 이상 금지). 대기실에서 방장이 사람을 눌러 팀을 옮기거나 🔀 섞어요. 두 명이면 1:1 오목이에요.</p>
+<h3>내 차례</h3><p>화면 위에 <b>지금 두는 사람</b>과 <b>다음 사람들</b>이 나와요. 내 차례가 되면 판의 교차점을 한 번 눌러 <b>미리보기</b>(반투명 돌), 같은 자리를 한 번 더 누르거나 <b>여기 두기</b>를 누르면 둬요. 빨간 <b>×</b> 자리는 내 색에게 금수라 못 둬요.</p>
+<h3>끝</h3><p>다섯을 이으면 그 팀 전원이 이겨요. 판이 꽉 차면 무승부. 한 팀이 모두 기권하면 남은 팀이 이겨요.</p>
+<h3>팀전일 때</h3><p>먼저 두는 팀이 <b>흑</b>, 다음 팀이 <b>백</b>이에요(누가 먼저인지는 시작할 때 정해져요). 차례는 흑1 → 백1 → 흑2 → 백2 … 팀을 번갈아 돌아요. 인원이 적은 팀은 같은 사람이 더 자주 둬요(팀마다 두는 횟수는 같아요). 말로 상의하는 건 자유지만, 돌은 차례인 사람만 둘 수 있어요.</p>
+<div class="rl-ex"><b>예)</b> 4명 2:2 — 지유·민준이 흑팀, 서연·AI 가 백팀. 지유(흑) → 서연(백) → 민준(흑) → AI(백) → 지유 … 지유가 만든 셋을 민준이 이어서 넷으로 만들고, 다음 지유 차례에 다섯!</div>
+<div class="rl-tip"><b>팁</b> — 내 다음 팀원이 누군지 보고 "이어 줄 수 있는" 모양을 만들어요. 상대 셋(양쪽이 열린)은 꼭 막아요.</div>`;
+
+const N = 15, SVGNS = 'http://www.w3.org/2000/svg';
+const ICON = { black: '⚫', white: '⚪' }, CNAME = { black: '흑', white: '백' };
+const stoneTag = (c) => `<i class="stone ${c}"></i>`;
+
+/* ---------------- 금수 고르기 (홈) — gomoku-core 의 PRESETS 와 같다. 서버가 normRules 로 다시 거른다 */
+const RULE_KEYS = ['three', 'four', 'long'], RULE_NAME = { three: '삼삼', four: '사사', long: '장목' };
+const RR = (three, four, long) => ({ three, four, long });
+const PRESETS = {
+  say: { black: RR(true, false, true), white: RR(true, false, true) },
+  renju: { black: RR(true, true, true), white: RR(false, false, false) },
+  free: { black: RR(false, false, false), white: RR(false, false, false) },
+};
+const PRESET_NOTE = {
+  say: '세이클럽·한게임 시절 일반룰이에요. 흑백 모두 삼삼 금지, 여섯 개 이상(장목)도 못 둬요. 사사는 돼요.',
+  renju: '렌주룰이에요. 먼저 두는 흑만 삼삼·사사·장목이 금지고, 백은 자유예요.',
+  free: '아무 데나 둬요. 먼저 두는 흑이 많이 유리해요.',
+};
+const RULE_SAVE = 'party-gomoku:rules';
+const sameRules = (a, b) => ['black', 'white'].every((c) => RULE_KEYS.every((k) => !!a[c][k] === !!b[c][k]));
+const presetOf = (r) => Object.keys(PRESETS).find((k) => sameRules(PRESETS[k], r)) || null;
+const ruleList = (one) => RULE_KEYS.filter((k) => one && one[k]).map((k) => RULE_NAME[k]).join('·');
+const rulesLine = (r) => '✕ 금수 — 흑 ' + (ruleList(r.black) || '없음') + ' / 백 ' + (ruleList(r.white) || '없음');
+let myRules = (() => {
+  try { const r = JSON.parse(localStorage.getItem(RULE_SAVE) || 'null'); if (r && r.black && r.white) return r; } catch (e) {}
+  return JSON.parse(JSON.stringify(PRESETS.say));
+})();
+function mountRuleEditor(P) {
+  const sel = P.$('pt-teams');
+  if (!sel) return;
+  sel.insertAdjacentHTML('afterend', `
+    <p class="teamnote">흑팀 ⚫ · 백팀 ⚪ — 팀은 대기실에서 방장이 정해요</p>
+    <div class="lbl" style="margin-top:12px">안 되는 수 (금수) ✕</div>
+    <div class="presets" id="gr-presets"><button type="button" data-p="say">세이클럽식</button><button type="button" data-p="renju">렌주</button><button type="button" data-p="free">금수 없음</button></div>
+    <table class="grules" id="gr-table">
+      <tr><th></th><th>흑 ⚫</th><th>백 ⚪</th></tr>
+      ${RULE_KEYS.map((k) => `<tr><td>${RULE_NAME[k]}<small>${{ three: '열린 삼 두 개를 한 번에', four: '넷 두 개를 한 번에', long: '여섯 개 이상 잇기' }[k]}</small></td>
+        <td><button type="button" class="ck" data-c="black" data-k="${k}">✕</button></td><td><button type="button" class="ck" data-c="white" data-k="${k}">✕</button></td></tr>`).join('')}
+    </table>
+    <p class="rule-note" id="gr-note"></p>`);
+  const draw = () => {
+    const p = presetOf(myRules);
+    document.querySelectorAll('#gr-presets button').forEach((b) => b.classList.toggle('on', b.dataset.p === p));
+    document.querySelectorAll('#gr-table .ck').forEach((b) => { const on = !!myRules[b.dataset.c][b.dataset.k]; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
+    P.$('gr-note').textContent = p ? PRESET_NOTE[p] : '직접 고른 규칙이에요. ✕ 칸이 그 돌에게 금지예요.';
+    try { localStorage.setItem(RULE_SAVE, JSON.stringify(myRules)); } catch (e) {}
+  };
+  document.querySelectorAll('#gr-presets button').forEach((b) => (b.onclick = () => { myRules = JSON.parse(JSON.stringify(PRESETS[b.dataset.p])); draw(); }));
+  document.querySelectorAll('#gr-table .ck').forEach((b) => (b.onclick = () => { myRules[b.dataset.c][b.dataset.k] = !myRules[b.dataset.c][b.dataset.k]; draw(); }));
+  draw();
+}
+
+/* ---------------- 판 (SVG) — 선은 한 번만, 돌은 수가 바뀔 때만 다시 그린다. 누르기는 SVG 전체가 받는다 */
+const M = 12, GAP = (320 - 2 * M) / (N - 1);
+const X = (c) => M + c * GAP, Y = (r) => M + r * GAP;
+function mk(tag, attrs, parent) { const e = document.createElementNS(SVGNS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; }
+const colorOfMove = (k) => (k % 2 === 0 ? 'black' : 'white');
+let built = false, svg, layer, cur = null, PP = null, ghost = null, drawnKey = null, wasMyTurn = false;
+
+function stone(parent, r, c, color, extra) {
+  return mk('circle', Object.assign({ cx: X(c), cy: Y(r), r: GAP * 0.44, fill: color === 'black' ? 'url(#pgb)' : 'url(#pgw)', stroke: color === 'black' ? '#000' : '#a89f90', 'stroke-width': 0.6 }, extra || {}), parent);
+}
+function build(el) {
+  el.innerHTML = `
+    <div class="banner" id="gbn"></div>
+    <section class="card" style="padding:10px">
+      <div class="teams"><div class="tbox" id="gtb"></div><div class="tbox" id="gtw"></div></div>
+      <div class="order" id="gorder"></div>
+    </section>
+    <section class="card" style="padding:8px">
+      <div class="board-wrap"><svg id="gboard" viewBox="0 0 320 320" aria-label="오목판"></svg></div>
+      <div style="height:8px"></div>
+      <button type="button" class="primary" id="gplace">여기 두기</button>
+      <p class="hint" id="ghint"></p>
+      <p class="rline" id="grule"></p>
+    </section>`;
+  svg = el.querySelector('#gboard');
+  const defs = mk('defs', {}, svg);
+  const gb = mk('radialGradient', { id: 'pgb', cx: '35%', cy: '30%', r: '70%' }, defs);
+  mk('stop', { offset: '0%', 'stop-color': '#6a6a6a' }, gb); mk('stop', { offset: '60%', 'stop-color': '#111' }, gb);
+  const gw = mk('radialGradient', { id: 'pgw', cx: '35%', cy: '30%', r: '75%' }, defs);
+  mk('stop', { offset: '0%', 'stop-color': '#fff' }, gw); mk('stop', { offset: '80%', 'stop-color': '#d9d2c6' }, gw);
+  const grid = mk('g', { stroke: '#6b4423', 'stroke-width': 0.9, 'stroke-linecap': 'square' }, svg);
+  for (let i = 0; i < N; i++) { mk('line', { x1: X(0), y1: Y(i), x2: X(N - 1), y2: Y(i) }, grid); mk('line', { x1: X(i), y1: Y(0), x2: X(i), y2: Y(N - 1) }, grid); }
+  for (const [r, c] of [[3, 3], [3, 11], [11, 3], [11, 11], [7, 7]]) mk('circle', { cx: X(c), cy: Y(r), r: 2.2, fill: '#6b4423' }, svg);
+  layer = { stones: mk('g', {}, svg), marks: mk('g', {}, svg), ghost: mk('g', {}, svg) };
+  svg.addEventListener('click', (e) => {
+    const st = cur;
+    if (!st || st.stage !== 'play' || !st.yourTurn) return;
+    const box = svg.getBoundingClientRect();
+    const px = ((e.clientX - box.left) / box.width) * 320, py = ((e.clientY - box.top) / box.height) * 320;
+    const c = Math.round((px - M) / GAP), r = Math.round((py - M) / GAP);
+    if (r < 0 || c < 0 || r >= N || c >= N || st.moves.some(([a, b]) => a === r && b === c)) return;
+    const f = (st.forbidden || []).find(([a, b]) => a === r && b === c);
+    if (f) { PP.err({ three: '삼삼이라 못 둬요 (× 자리)', four: '사사라 못 둬요 (× 자리)', long: '여섯 개 이상(장목)이 돼서 못 둬요 (× 자리)' }[f[2]] || '거기엔 못 둬요'); return; }
+    if (ghost && ghost[0] === r && ghost[1] === c) { place(); return; }      // 같은 자리 두 번 = 두기
+    ghost = [r, c];
+    drawBoard(st, PP);
+  });
+  el.querySelector('#gplace').onclick = place;
+  built = true;
+}
+function place() {
+  if (!ghost || !cur || !cur.yourTurn) return;
+  const [r, c] = ghost;
+  ghost = null;
+  PP.act('place', { r, c });
+}
+function drawBoard(st, P) {
+  const key = st.round + ':' + st.moves.length + ':' + (st.line ? 'L' : '');
+  if (key !== drawnKey) {
+    drawnKey = key;
+    layer.stones.textContent = '';
+    st.moves.forEach(([r, c], k) => stone(layer.stones, r, c, colorOfMove(k)));
+    if (st.moves.length) {            // 마지막 수 — 점 색 = 둔 사람 색
+      const [r, c, s] = st.moves[st.moves.length - 1];
+      mk('circle', { cx: X(c), cy: Y(r), r: GAP * 0.2, fill: P.color(s), stroke: '#fff', 'stroke-width': 1.2 }, layer.stones);
+    }
+    if (st.line) {
+      const a = st.line[0], b = st.line[st.line.length - 1];
+      mk('line', { x1: X(a[1]), y1: Y(a[0]), x2: X(b[1]), y2: Y(b[0]), stroke: '#e2513b', 'stroke-width': 3, 'stroke-linecap': 'round', opacity: 0.75 }, layer.stones);
+    }
+  }
+  layer.marks.textContent = '';
+  for (const [r, c] of st.forbidden || []) {
+    const d = GAP * 0.2;
+    mk('path', { d: `M${X(c) - d} ${Y(r) - d}L${X(c) + d} ${Y(r) + d}M${X(c) + d} ${Y(r) - d}L${X(c) - d} ${Y(r) + d}`, stroke: '#c0392b', 'stroke-width': 1.6, 'stroke-linecap': 'round', opacity: 0.8 }, layer.marks);
+  }
+  layer.ghost.textContent = '';
+  if (ghost && st.yourTurn) stone(layer.ghost, ghost[0], ghost[1], st.myColor, { opacity: 0.55 });
+  PP.$('gplace').disabled = !(st.yourTurn && ghost);
+}
+
+/* 팀 색(흑/백) — blackTeam 이 흑 */
+const colorOfTeam = (st, t) => (t === st.blackTeam ? 'black' : 'white');
+const seatColor = (st, i) => colorOfTeam(st, st.players[i].team);
+
+function teamBox(st, P, color) {
+  const t = color === 'black' ? st.blackTeam : 1 - st.blackTeam;
+  const mine = st.players[st.you] && st.players[st.you].team === t;
+  const mem = st.players.map((p, i) => ({ p, i })).filter(({ p }) => p.team === t);
+  return `<div class="h">${stoneTag(color)}${CNAME[color]}팀 ${P.teamTag(t)}${mine ? '<span class="me">우리 팀</span>' : ''}</div>
+    <div class="mem">${mem.map(({ p, i }) => `<div class="${i === st.turn ? 'now' : ''}${p.out ? ' out' : ''}"><i class="d" style="background:${P.color(i)}"></i><span class="n">${P.esc(P.name(i))}${p.me ? ' (나)' : ''}</span>${i === st.turn ? ' ✋' : ''}</div>`).join('')}</div>`;
+}
+
+function render(st, el, P) {
+  PP = P; cur = st;
+  if (!built) build(el);
+  const $ = (id) => el.querySelector('#' + id);
+  if (!st.yourTurn) ghost = null;
+  const turnColor = st.turnColor;
+  $('gtb').innerHTML = teamBox(st, P, 'black');
+  $('gtw').innerHTML = teamBox(st, P, 'white');
+  $('gtb').classList.toggle('on', turnColor === 'black');
+  $('gtw').classList.toggle('on', turnColor === 'white');
+  // 지금 → 다음 순서
+  const seq = [st.turn, ...(st.upcoming || [])].filter((i) => i !== null && i !== undefined);
+  $('gorder').innerHTML = '<span>순서</span>' + seq.map((i, k) => `${k ? '→' : ''}<span class="o${k === 0 ? ' now' : ''}${i === st.you ? ' mine' : ''}">${stoneTag(seatColor(st, i))}<span class="n">${P.esc(i === st.you ? '나' : P.name(i))}</span></span>`).join('');
+  // 지금 할 일
+  const meOut = st.players[st.you] && st.players[st.you].out;
+  const bn = $('gbn');
+  bn.className = 'banner' + (st.yourTurn ? ' me' : '');
+  if (meOut) bn.textContent = '기권했어요 — 구경 중';
+  else if (st.yourTurn) bn.innerHTML = '내 차례 — ' + ICON[st.myColor] + ' ' + CNAME[st.myColor] + '돌을 둬요' + (st.forbidden && st.forbidden.length ? ' (× 는 못 둬요)' : '');
+  else {
+    const nextMine = (st.upcoming || [])[0] === st.you;
+    bn.innerHTML = '<span class="dots">' + P.esc(P.jo(P.name(st.turn), '이', '가')) + ' ' + ICON[turnColor] + ' 두는 중</span>' + (nextMine ? ' · 다음이 내 차례!' : '');
+  }
+  if (st.yourTurn && !wasMyTurn && st.moves.length) { P.toast('내 차례예요! ' + ICON[st.myColor]); try { navigator.vibrate && navigator.vibrate(60); } catch (e) {} }
+  wasMyTurn = !!st.yourTurn;
+  // 마지막 수
+  const last = st.moves[st.moves.length - 1];
+  $('ghint').innerHTML = (last ? `<span class="lastmv">마지막 수 ${stoneTag(colorOfMove(st.moves.length - 1))} <i style="background:${P.color(last[2])}"></i>${P.esc(P.name(last[2]))}</span> · ` : '')
+    + (st.yourTurn ? '한 번 누르면 미리보기, 한 번 더 누르면 둬요' : '내 차례가 오면 판을 눌러요');
+  $('grule').textContent = rulesLine(st.rules) + ' · ' + st.moves.length + '수';
+  $('gplace').classList.toggle('hide', !st.yourTurn);
+  drawBoard(st, P);
+}
+
+/* 끝 화면 — 팀 결과 문구를 오목에 맞게 고치고, 마지막 판을 작게 보여준다 */
+function finalBoard(st, P) {
+  let s = `<svg viewBox="0 0 320 320" style="background:linear-gradient(135deg,#f1c98f,#e2ad6c)"><g stroke="#6b4423" stroke-width=".9">`;
+  for (let i = 0; i < N; i++) s += `<line x1="${X(0)}" y1="${Y(i)}" x2="${X(N - 1)}" y2="${Y(i)}"/><line x1="${X(i)}" y1="${Y(0)}" x2="${X(i)}" y2="${Y(N - 1)}"/>`;
+  s += '</g>';
+  st.moves.forEach(([r, c], k) => { const b = k % 2 === 0; s += `<circle cx="${X(c)}" cy="${Y(r)}" r="${GAP * 0.44}" fill="${b ? '#1a1a1a' : '#f4f0ea'}" stroke="${b ? '#000' : '#a89f90'}" stroke-width=".6"/>`; });
+  if (st.moves.length) { const [r, c, w] = st.moves[st.moves.length - 1]; s += `<circle cx="${X(c)}" cy="${Y(r)}" r="${GAP * 0.2}" fill="${P.color(w)}" stroke="#fff" stroke-width="1.2"/>`; }
+  if (st.line) { const a = st.line[0], b = st.line[st.line.length - 1]; s += `<line x1="${X(a[1])}" y1="${Y(a[0])}" x2="${X(b[1])}" y2="${Y(b[0])}" stroke="#e2513b" stroke-width="3" stroke-linecap="round" opacity=".8"/>`; }
+  return s + '</svg>';
+}
+function final(st, P) {
+  ghost = null; drawnKey = null; wasMyTurn = false;
+  const myTeam = st.players[st.you] && st.players[st.you].team;
+  const win = P.$('pt-winner');
+  if (st.draw) win.textContent = '🤝 비겼어요';
+  else if (st.winTeam !== null && st.winTeam !== undefined) {
+    const c = colorOfTeam(st, st.winTeam);
+    win.textContent = (st.winTeam === myTeam ? '🎉 ' : '') + ICON[c] + ' ' + CNAME[c] + '팀 우승' + (st.winTeam === myTeam ? ' — 우리 팀!' : '');
+  }
+  P.$('pt-tres').querySelectorAll('.r').forEach((row) => {
+    const sc = row.querySelector('.sc'); if (sc) sc.textContent = st.draw ? '무' : sc.textContent ? '🏆' : '';
+  });
+  P.$('pt-rank').querySelectorAll('.r .sc').forEach((sc) => { sc.textContent = st.draw ? '무' : sc.textContent === '1' ? '승' : '패'; });
+  const last = st.moves[st.moves.length - 1];
+  const why = st.reason === 'five' && last ? `${P.esc(P.name(last[2]))}의 수로 ${CNAME[colorOfMove(st.moves.length - 1)]}이 다섯을 이었어요`
+    : st.reason === 'full' ? '판이 꽉 찼어요'
+    : st.reason === 'stuck' ? '둘 수 있는 자리가 남지 않았어요'
+    : st.reason === 'resign' ? '상대 팀이 모두 기권했어요' : '';
+  return `<div class="fin">${why}<br>⚫ 흑 = ${P.teamTag(st.blackTeam)} · ⚪ 백 = ${P.teamTag(1 - st.blackTeam)} · ${st.moves.length}수</div>${finalBoard(st, P)}`;
+}
+
+const PARTY = Party.init({
+  game: 'gomoku', title: '팀 오목', emoji: '⚫', sub: '2~8명 · 흑팀 대 백팀, 돌아가며 두는 오목', maxDefault: 4,
+  teamOptions: [2],
+  rules: { title: '⚫ 팀 오목 규칙', html: RULES },
+  options: () => ({ rules: myRules }),
+  render, final,
+});
+mountRuleEditor(PARTY);
+</script>
+</body>
+</html>

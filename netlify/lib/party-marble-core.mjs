@@ -13,7 +13,7 @@
  * 끝: 한 명만 남거나, 차례가 인원 × 20 번 돌면 — 총자산(현금 + 땅값 + 건물값)으로 순위.
  * 비밀 없음 — 다 공개. 황금열쇠만 뽑을 때 정해진다.
  */
-import { handleParty, turnSeat, activeSeats, ranking, seeded } from './party-kit.mjs';
+import { handleParty, turnSeat, activeSeats, ranking, seeded, oneSideLeft, teamOf } from './party-kit.mjs';
 
 export const N = 28, START_CASH = 1500, SALARY = 200, MAX_LAPS = 20;
 export const LEVELS = ['땅', '빌라', '빌딩', '호텔'];
@@ -115,6 +115,8 @@ function land(room, p) {
       log(g, `${s.name} — 돈이 모자라 못 사요`, p);
     } else if (o.p === p) {
       if (s.t === 'city' && o.lv < 3 && g.cash[p] >= buildCost(i, o.lv + 1)) { g.state = 'build'; g.pending = i; return; }
+    } else if (room.teams && teamOf(room, o.p) === teamOf(room, p)) {
+      log(g, `${s.name} — 팀원(${room.players[o.p].name}) 땅이라 통행료 없음`, p);   // 팀전: 팀원끼리는 안 낸다
     } else {
       const r = rentOf(g, i);
       log(g, `${s.name}(${room.players[o.p].name}) 통행료 ${r}`, p);
@@ -146,7 +148,7 @@ function land(room, p) {
 
 export function status(ctx) {
   const { room } = ctx, g = room.g, alive = aliveSeats(room);
-  const over = alive.length <= 1 || g.turnNo >= g.maxTurns;
+  const over = oneSideLeft(room, alive) || g.turnNo >= g.maxTurns;   // 팀전이면 한 팀만 남아도 끝
   if (over) {
     const worth = room.players.map((_, i) => (alive.includes(i) ? netWorth(g, i) : null));
     const best = Math.max(...alive.map((i) => worth[i]));

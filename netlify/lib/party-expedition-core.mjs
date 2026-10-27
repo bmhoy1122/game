@@ -5,7 +5,7 @@
  *   · 덱 마지막 장을 가져가면 끝. 점수가 가장 높은 사람이 이긴다(같으면 공동).
  *   · 기권한 사람의 탐험로는 그대로 두고(점수엔 안 들어감) 차례에서만 뺀다.
  */
-import { handleParty, turnSeat, ranking, seeded, shuffle } from './party-kit.mjs';
+import { handleParty, turnSeat, ranking, seeded, shuffle, oneSideLeft } from './party-kit.mjs';
 
 export const COLORS = 5, PER = 12, HAND = 8;
 export const col = (id) => Math.floor(id / PER);
@@ -48,7 +48,7 @@ export function lineWhy(line, id) {
 export function status(ctx) {
   const { room, active } = ctx;
   const scores = room.players.map((_, i) => (active.includes(i) ? totalScore(room.lines[i]) : null));
-  if (room.deck.length > 0 && active.length > 1) return { phase: 'play', turn: turnSeat(room, room.turnNo), step: room.step, scores, winners: null };
+  if (room.deck.length > 0 && !oneSideLeft(room, active)) return { phase: 'play', turn: turnSeat(room, room.turnNo), step: room.step, scores, winners: null };
   const best = Math.max(...active.map((i) => scores[i]));
   return { phase: 'done', turn: null, step: null, scores, winners: active.filter((i) => scores[i] === best) };
 }

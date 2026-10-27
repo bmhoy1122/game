@@ -15,6 +15,7 @@ const GAMES = {
   spice: 'spice-core.mjs', tiles: 'tiles-core.mjs', expedition: 'expedition-core.mjs', backgammon: 'backgammon-core.mjs',
   wordbingo: 'wordbingo-core.mjs',
   'party-bingo': 'party-bingo-core.mjs', 'party-spice': 'party-spice-core.mjs', 'party-expedition': 'party-expedition-core.mjs', 'party-marble': 'party-marble-core.mjs',
+  'party-gomoku': 'party-gomoku-core.mjs', 'party-balance': 'party-balance-core.mjs', 'party-wordbingo': 'party-wordbingo-core.mjs',
 };
 const TYPES = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8',

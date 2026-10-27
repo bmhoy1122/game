@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1">
+<meta name="theme-color" content="#53284f">
+<title>여럿이 이심전심</title>
+<style>
+  :root{--accent:#e8577e;--soft:#fbeef3;--ink:#4a2b3f;--mute:#a36084;--line:#f0d8e4;--bg:radial-gradient(130% 80% at 50% 0%,#ffe1c4 0%,#ffa8b8 38%,#b3688f 72%,#53284f 100%);
+    --pk-accent:#e8577e;--pk-soft:#fdf0f5;--pk-ink:#7a3f60;--pk-line:#f0d8e4}
+  body{background-attachment:fixed}
+  .prog{display:flex;align-items:center;gap:10px;font-weight:800;color:#8a3f63;font-size:14px}
+  .prog .bar{flex:1;height:8px;border-radius:8px;background:#f3e0ea;overflow:hidden}
+  .prog .bar i{display:block;height:100%;background:linear-gradient(90deg,#ff9fb8,#e8577e);transition:width .3s}
+  .prog .my{font-size:13px;color:#d4446e;white-space:nowrap}
+  .ql{text-align:center;font-size:13px;font-weight:800;color:#b07a98;letter-spacing:1px;margin:10px 0 12px}
+  .opt{position:relative;display:block;width:100%;min-height:76px;font-size:20px;background:#fdf3f7;color:#7a3f60;border:3px solid #f3e0ea;line-height:1.25;padding:14px 12px;word-break:keep-all}
+  .opt.me{background:linear-gradient(135deg,#ff8fae,#e8577e);color:#fff;border-color:#e8577e}
+  .opt:disabled{opacity:1}
+  .opt.dim,.opt.dim:disabled{opacity:.5}
+  .opt .cnt{display:block;font-size:12px;font-weight:800;margin-top:4px;opacity:.85}
+  .names{display:flex;flex-wrap:wrap;justify-content:center;gap:4px;margin-top:8px}
+  .names:empty{display:none}
+  .nm{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:800;padding:3px 8px;border-radius:999px;background:#fff;color:#4a2b3f;border:2px solid #f0d8e4;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .nm i{width:8px;height:8px;border-radius:50%;flex:none}
+  .nm.mine{background:#fff4c2}
+  .vs{text-align:center;font-weight:900;color:#d9a3bd;font-size:13px;margin:7px 0}
+  .status{text-align:center;font-weight:800;font-size:14px;border-radius:14px;padding:11px;margin-top:12px}
+  .status.wait{background:#f5ecf1;color:#8a6a7c}
+  .status.yes{background:linear-gradient(135deg,#ffe0ea,#ffc4d6);color:#c23a63}
+  .status.no{background:#f3ecf6;color:#7b5a86}
+  .thits{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:8px}
+  .thits span{font-size:12px;font-weight:800;padding:4px 9px;border-radius:999px;color:#fff}
+  .thits span.miss{opacity:.45}
+  #nx{margin-top:12px}
+  .sb{display:flex;flex-direction:column;gap:5px}
+  .sb .r{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;padding:6px 8px;border-radius:10px;background:#fbf2f6;min-width:0}
+  .sb .r .n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .sb .r b{font-size:15px;color:#d4446e}
+  .sb .r.me{background:#fff4c2}
+  .sb .r.out{opacity:.45}
+  .sb .tr{color:#fff}
+  .sb .tr b{color:#fff}
+  .dot{width:10px;height:10px;border-radius:50%;flex:none}
+  .hist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+  .hist li{display:flex;align-items:center;gap:8px;background:#fbf2f6;border-radius:12px;padding:8px 10px;font-size:13px}
+  .hist .qq{flex:1;min-width:0;font-weight:700;color:#7a3f60;word-break:keep-all}
+  .hist .qq b{color:#d4446e}
+  .hist .qq s{text-decoration:none;color:#a07b92}
+  .hist .g{font-weight:900;color:#d4446e;white-space:nowrap}
+  .hist .th{font-size:11px;white-space:nowrap}
+  .fin h3{margin:14px 0 6px;font-size:14px;color:#8a3f63;text-align:left}
+  .best{display:flex;flex-direction:column;gap:5px;text-align:left}
+  .best .r{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700}
+  .best .r .n{width:84px;flex:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .best .bar{flex:1;height:10px;border-radius:6px;background:#f3e0ea;overflow:hidden}
+  .best .bar i{display:block;height:100%;background:linear-gradient(90deg,#ff9fb8,#e8577e)}
+  .best .r.top .n{color:#d4446e}
+  .heart{font-size:15px;font-weight:900;color:#d4446e;text-align:center;margin:4px 0 2px}
+  .fin .sb,.fin .hist{text-align:left}
+  .fin .note{font-size:12px;color:#a36084;font-weight:700;margin:6px 0 0}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script src="../couple-common/rules.js"></script>
+<script src="../party-common/party.js"></script>
+<script>
+const RULES = `
+<h3>한눈에</h3><p>질문 하나에 보기 둘 — <b>짜장면 vs 짬뽕</b> 같은 거예요. 모두가 <b>동시에</b> 하나를 고르고, 다 고르면 같이 공개해요. 나와 같은 걸 고른 사람이 많을수록 점수가 올라가요 (텔레파시 점수).</p>
+<h3>준비</h3><p>방장이 방을 만들 때 문제 수(5·10·15)를 골라요. 질문은 저절로 섞여 나와요. 2~8명, 모자라면 AI 를 넣어요.</p>
+<h3>내 차례</h3><p>차례는 없어요. 질문이 나오면 둘 중 하나를 눌러요. <b>모두 고르기 전까지는 바꿀 수 있고</b>, 남이 뭘 골랐는지는 공개 전엔 아무도 몰라요 (몇 명이 골랐는지만 보여요). 다 고르면 누가 어느 쪽인지 이름이 붙어요. <b>다음 질문</b>은 아무나 눌러도 돼요.</p>
+<h3>끝 · 점수</h3><p>문제마다 <b>나와 같은 걸 고른 사람 수만큼 +1</b>. 마지막 문제가 끝나면 점수 순위와 함께 <b>나와 가장 잘 맞는 사람</b>(같은 답이 가장 많았던 사람)을 보여줘요.</p>
+<h3>팀전일 때</h3><p>문제마다 <b>팀원 모두가 같은 답</b>을 고르면 그 팀 <b>이심전심 성공 +1</b>. 성공이 가장 많은 팀이 이겨요. 팀원이 한 명뿐인 팀은 <b>많이 고른 쪽</b>(같은 수면 둘 다)과 같으면 성공이에요. 팀끼리 상의는 금지 — 눈빛으로만!</p>
+<div class="rl-ex">예: 4명 중 나·지유·민수가 짬뽕, 하나가 짜장면 → 나·지유·민수는 각각 +2, 하나는 0. 팀전에서 나와 지유가 같은 팀이면 우리 팀 성공 +1.</div>
+<div class="rl-tip">"다른 사람들이 뭘 고를까?"를 생각하면 점수가 잘 나와요. 끝나면 누구와 제일 잘 맞았는지 꼭 확인해보세요.</div>`;
+
+let built = false, lastKey = '';
+const savedCount = () => { try { return [5, 10, 15].includes(+localStorage.getItem('party-balance:count')) ? +localStorage.getItem('party-balance:count') : 10; } catch (e) { return 10; } };
+const teamCol = (P, i) => { const t = P.team(i); return t === null || t === undefined ? null : P.TEAM_COLORS[t]; };
+const chip = (P, st, i) => { const tc = teamCol(P, i); return `<span class="nm${i === st.you ? ' mine' : ''}"${tc ? ` style="border-color:${tc}"` : ''}><i style="background:${P.color(i)}"></i>${P.esc(P.name(i))}</span>`; };
+
+function build(el) {
+  el.innerHTML = `
+    <div class="banner" id="bn"></div>
+    <section class="card">
+      <div class="prog"><span id="pn"></span><div class="bar"><i id="pb"></i></div><span class="my" id="pm"></span></div>
+      <div class="ql" id="ql"></div>
+      <button type="button" class="opt" id="o0"><span class="lab"></span><span class="cnt"></span><span class="names"></span></button>
+      <div class="vs">VS</div>
+      <button type="button" class="opt" id="o1"><span class="lab"></span><span class="cnt"></span><span class="names"></span></button>
+      <div class="status wait" id="sx"></div>
+      <div class="thits" id="th"></div>
+      <button type="button" class="primary hide" id="nx">다음 질문 →</button>
+    </section>
+    <section class="card"><h2 id="sbt">텔레파시 점수</h2><div class="sb" id="sb"></div></section>
+    <section class="card hide" id="hc"><h2>지난 문제</h2><ul class="hist" id="hist"></ul></section>`;
+  built = true;
+}
+
+function histRow(h, st, P) {
+  const me = st.you, mine = h.picks[me];
+  const c = [0, 1].map((k) => h.picks.filter((p) => p === k).length);
+  const side = (k) => (mine === k ? `<b>${P.esc(h.q[k])} ${c[k]}</b>` : `<s>${P.esc(h.q[k])} ${c[k]}</s>`);
+  const th = st.teams && h.teamHit ? `<span class="th">${h.teamHit.map((x, t) => (x ? P.TEAM_ICONS[t] : '')).join('')}</span>` : '';
+  return `<li><span class="qq">${side(0)} · ${side(1)}</span>${th}<span class="g">${mine === null || mine === undefined ? '-' : '+' + h.gain[me]}</span></li>`;
+}
+
+function render(st, el, P) {
+  if (!built) build(el);
+  const $ = (id) => el.querySelector('#' + id);
+  const me = st.you, out = st.players[me] && st.players[me].out;
+  const rv = st.reveal;
+  $('pn').textContent = (st.qi + 1) + ' / ' + st.total;
+  $('pb').style.width = ((st.qi + (rv ? 1 : 0)) / st.total * 100) + '%';
+  $('pm').textContent = '내 점수 ' + st.scores[me];
+  $('ql').textContent = 'Q' + (st.qi + 1) + (st.teams ? ' · 팀원과 같은 걸 골라요' : ' · 남들은 뭘 고를까?');
+  [0, 1].forEach((k) => {
+    const b = $('o' + k);
+    b.querySelector('.lab').textContent = st.q[k];
+    b.querySelector('.cnt').textContent = rv ? rv.cnt[k] + '명' : '';
+    b.querySelector('.names').innerHTML = rv ? rv.picks.map((p, i) => (p === k ? chip(P, st, i) : '')).join('') : '';
+    b.classList.toggle('me', st.mine === k);
+    b.classList.toggle('dim', !!rv && rv.cnt[k] === 0);
+    b.disabled = !!rv || out;
+    b.onclick = () => { if (!rv && !out && st.mine !== k) P.act('pick', { qi: st.qi, choice: k }); };
+  });
+  const sx = $('sx'), bn = $('bn');
+  const waiting = st.players.map((p, i) => (!p.out && !st.picked[i] ? P.name(i) : null)).filter(Boolean);
+  if (rv) {
+    const g = st.mine === null || st.mine === undefined ? null : rv.gain[me];
+    sx.className = 'status ' + (g ? 'yes' : 'no');
+    sx.textContent = g === null ? '공개!' : g ? `나와 같은 사람 ${g}명 — 이번 문제 +${g} 💞` : '나만 다른 걸 골랐어요 — 이번 문제 +0';
+    bn.className = 'banner me'; bn.textContent = out ? '공개됐어요 — 구경 중' : "공개! '다음 질문'을 눌러요 (아무나 눌러도 돼요)";
+  } else {
+    sx.className = 'status wait';
+    sx.innerHTML = `${st.pickedCount} / ${st.activeCount}명 골랐어요` + (waiting.length && st.mine !== null ? `<br><span class="dots" style="font-size:12px">기다리는 중: ${P.esc(waiting.join(', '))}</span>` : '');
+    bn.className = 'banner' + (st.mine === null && !out ? ' me' : '');
+    bn.textContent = out ? '기권했어요 — 구경 중' : st.mine === null ? '둘 중 하나를 골라요 (다 고르기 전엔 바꿀 수 있어요)' : '골랐어요! 기다리는 중 (다른 쪽을 누르면 바꿔요)';
+  }
+  $('th').innerHTML = rv && st.teams ? rv.teamHit.map((x, t) => `<span class="${x ? '' : 'miss'}" style="background:${P.TEAM_COLORS[t]}">${P.TEAM_ICONS[t]} ${P.TEAM_NAMES[t]} ${x ? '이심전심 +1' : '엇갈림'}</span>`).join('') : '';
+  $('nx').classList.toggle('hide', !rv || out);
+  $('nx').textContent = st.qi + 1 >= st.total ? '결과 보기 →' : '다음 질문 →';
+  $('nx').onclick = () => P.act('next', { qi: st.qi });
+  // 점수판 — 팀전이면 팀 성공 수를 위에
+  let sb = '';
+  if (st.teams) sb += st.teamScores.map((v, t) => `<div class="r tr" style="background:${P.TEAM_COLORS[t]}"><span class="n">${P.TEAM_ICONS[t]} ${P.TEAM_NAMES[t]} 이심전심</span><b>${v}</b></div>`).join('');
+  const order = st.players.map((_, i) => i).sort((a, b) => st.scores[b] - st.scores[a] || a - b);
+  sb += order.map((i) => `<div class="r${i === me ? ' me' : ''}${st.players[i].out ? ' out' : ''}"><span class="dot" style="background:${P.color(i)}"></span><span class="n">${P.esc(P.name(i))}${i === me ? ' (나)' : ''}${st.players[i].out ? ' (나감)' : ''}</span>${st.teams ? P.teamTag(P.team(i)) : ''}${st.picked[i] && !rv ? '<span title="골랐어요">✅</span>' : ''}<b>${st.scores[i]}</b></div>`).join('');
+  $('sbt').textContent = st.teams ? '팀 이심전심 · 개인 텔레파시 점수' : '텔레파시 점수 (나와 같은 사람 수만큼 +1)';
+  $('sb').innerHTML = sb;
+  $('hc').classList.toggle('hide', !st.history.length);
+  const key = st.round + ':' + st.history.length;
+  if (key !== lastKey) { lastKey = key; $('hist').innerHTML = st.history.map((h) => histRow(h, st, P)).reverse().join(''); }
+}
+
+function final(st, P) {
+  const me = st.you, n = st.players.length, total = st.history.length || 1;
+  let h = '<div class="fin">';
+  if (st.teams && st.teamScores) {
+    h += '<h3>팀별 이심전심 성공</h3><div class="sb">' + st.teamScores.map((v, t) => `<div class="r tr" style="background:${P.TEAM_COLORS[t]}"><span class="n">${P.TEAM_ICONS[t]} ${P.TEAM_NAMES[t]}</span><b>${v} / ${st.history.length}</b></div>`).join('') + '</div>';
+    h += '<p class="note">순위 숫자는 개인 텔레파시 점수(나와 같은 사람 수의 합)예요.</p>';
+  }
+  const others = [...Array(n)].map((_, j) => j).filter((j) => j !== me).sort((a, b) => st.match[b] - st.match[a] || a - b);
+  if (others.length && st.match) {
+    const top = st.match[others[0]];
+    const best = others.filter((j) => st.match[j] === top);
+    h += '<h3>나와 가장 잘 맞는 사람</h3>';
+    h += `<div class="heart">💞 ${best.map((j) => P.esc(P.name(j))).join(' · ')} — ${st.history.length}문제 중 ${top}번 같았어요</div>`;
+    h += '<div class="best">' + others.map((j) => `<div class="r${st.match[j] === top ? ' top' : ''}"><span class="n">${P.esc(P.name(j))}</span><div class="bar"><i style="width:${(st.match[j] / total) * 100}%"></i></div><b>${st.match[j]}</b></div>`).join('') + '</div>';
+  }
+  if (st.history.length) h += '<h3>문제별 결과</h3><ul class="hist">' + st.history.map((x) => histRow(x, st, P)).join('') + '</ul>';
+  return h + '</div><div style="height:10px"></div>';
+}
+
+Party.init({
+  teamScore: (st, t) => (st.teamScores ? '이심전심 ' + st.teamScores[t] + '번' : ''),   // 팀 줄 오른쪽 = 팀 성공 수
+  game: 'balance', title: '여럿이 이심전심', emoji: '💞', sub: '2~8명 · 동시에 고르고 같이 공개 — 누가 나랑 잘 맞을까', maxDefault: 4,
+  rules: { title: '💞 여럿이 이심전심 규칙', html: RULES },
+  // ?bot=1 이면 init 안에서 바로 방을 만들어서 아래 '문제 수' 칸이 아직 없다 — 그땐 저장해둔 값
+  options: () => { const el = document.getElementById('pb-count'); return { count: el ? +el.value : savedCount() }; },
+  render, final,
+});
+// 홈 화면에 '문제 수' 고르기를 끼워 넣는다 (party.js 는 그대로)
+(function () {
+  const teams = document.getElementById('pt-teams');
+  const saved = savedCount();
+  teams.insertAdjacentHTML('afterend', '<div class="lbl">문제 수</div><select id="pb-count">' + [5, 10, 15].map((c) => `<option value="${c}"${c === saved ? ' selected' : ''}>${c}문제</option>`).join('') + '</select>');
+  document.getElementById('pb-count').addEventListener('change', (e) => { try { localStorage.setItem('party-balance:count', e.target.value); } catch (x) {} });
+})();
+</script>
+</body>
+</html>

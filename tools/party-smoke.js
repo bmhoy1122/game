@@ -165,6 +165,94 @@ const lib = (f) => import(path.join(__dirname, '..', 'netlify/lib', f));
       check('마블: 호텔 통행료 = 가격 × 1.5 (× 독점 2)', Ma.rentOf(g, 1) === 180);
       check('마블: 빌라 건축비 = 가격의 절반', Ma.buildCost(27, 1) === 160);
     }
+
+    /* ---------- 팀전 ---------- */
+    {
+      // 대기실: 팀 나누기·옮기기·섞기는 방장만, 빈 팀이면 시작 못 함
+      const t = table(Sp.handle, 2, 2, 6, { teams: 2 });
+      let r = await t.open();
+      r = await t.poll();
+      check('팀: 만들 때 2팀 — 들어오는 순서대로 사람 적은 팀에', r.body.teams === 2 && JSON.stringify(r.body.players.map((p) => p.team)) === '[0,1,0,1]', JSON.stringify(r.body.players.map((p) => p.team)));
+      check('팀: 방장 아니면 팀을 못 바꾼다', (await t.as(1, { action: 'setteam', seat: 1, team: 0 })).status === 403);
+      for (const i of [1, 3]) await t.as(0, { action: 'setteam', seat: i, team: 0 });
+      check('팀: 빈 팀이 있으면 시작 못 함', (await t.start()).status === 409);
+      await t.as(0, { action: 'shuffleteams' });
+      r = await t.poll();
+      check('팀: 섞기는 고르게 (2:2)', [0, 1].every((k) => r.body.players.filter((p) => p.team === k).length === 2));
+      check('팀: 이상한 팀 수는 거절', (await t.as(0, { action: 'teams', n: 5 })).status === 400);
+      await t.as(0, { action: 'teams', n: 0 });
+      check('팀: 개인전으로 돌리면 팀이 사라진다', (await t.poll()).body.players.every((p) => p.team === null));
+      await t.as(0, { action: 'teams', n: 2 });
+      r = await t.start();
+      check('팀: 시작', r.body.phase === 'play' && r.body.teams === 2);
+      // 차례는 팀을 번갈아
+      const room = await t.store.get('room:' + r.body.code);
+      const seq = [...Array(8)].map((_, k) => K.turnSeat(room, k));
+      check('팀: 차례가 팀을 번갈아 돈다', seq.every((x, k) => k === 0 || K.teamOf(room, x) !== K.teamOf(room, seq[k - 1])), JSON.stringify(seq));
+      check('팀: 한 바퀴에 모두 한 번씩', new Set(seq.slice(0, 4)).size === 4);
+      // 3:1 로 나뉘어도 팀 차례는 같은 수
+      const uneven = { players: [{ team: 0 }, { team: 0 }, { team: 0 }, { team: 1 }], teams: 2, first: 0, out: [false, false, false, false] };
+      const us = [...Array(6)].map((_, k) => K.turnSeat(uneven, k));
+      check('팀: 인원이 달라도 팀끼리 번갈아 (작은 팀은 같은 사람이 더 자주)', JSON.stringify(us) === '[0,3,1,3,2,3]', JSON.stringify(us));
+      const quit = { ...uneven, first: 1, out: [false, true, false, false] };   // 선공(빨강 1번 자리)이 기권
+      const qs = [...Array(4)].map((_, k) => K.turnSeat(quit, k));
+      check('팀: 선공이 기권해도 선공 팀부터 번갈아', JSON.stringify(qs) === '[2,3,0,3]', JSON.stringify(qs));
+      const solo2 = table(Bi.handle, 1, 0, 4, { bot: true, bots: 3, teams: 2 }); const sr = await solo2.open();
+      check('팀: 혼자 하기 + 2팀 — AI 셋과 2:2 로 바로 시작', sr.body.phase === 'play' && sr.body.teams === 2 && [0, 1].every((k) => sr.body.players.filter((p) => p.team === k).length === 2));
+      const solo4 = table(Bi.handle, 1, 0, 2, { bot: true, bots: 1, teams: 4 }); const s4 = await solo4.open();
+      check('팀: 혼자 하기인데 사람이 팀 수보다 적으면 개인전으로', s4.body.phase === 'play' && s4.body.teams === 0);
+      check('팀: oneSideLeft — 같은 팀만 남으면 true', K.oneSideLeft(uneven, [0, 2]) && !K.oneSideLeft(uneven, [0, 3]) && !K.oneSideLeft({ teams: 0, players: [] }, [0, 2]));
+      // 끝까지 — 팀 점수는 팀원 합
+      let guard = 0;
+      while (r.body.stage === 'play' && guard++ < 900) {
+        const who = r.body.turn;
+        if (who === 0 || who === 1) {
+          const st = await t.store.get('room:' + r.body.code);
+          const m = Sp.botMove({ room: st, idx: who, active: K.activeSeats(st), docs: st.players.map(() => ({})) }, Math.random);
+          r = await t.as(who, { action: m.act, ...m.body }); if (r.status !== 200) { check('팀 향신료: 사람 수 오류', false, r.body.error); break; }
+        } else r = await t.poll(0);
+      }
+      check('팀 향신료: 끝까지 간다', r.body.stage === 'done' && r.body.team, 'stage=' + r.body.stage);
+      const tm = r.body.team, sums = [0, 1].map((k) => r.body.final.reduce((a, f, i) => a + (r.body.players[i].team === k && f ? f.total : 0), 0));
+      check('팀 향신료: 팀 점수 = 팀원 점수 합', JSON.stringify(tm.scores) === JSON.stringify(sums), JSON.stringify([tm.scores, sums]));
+      check('팀 향신료: 이긴 팀 = 합이 큰 팀', tm.winners.every((k) => tm.scores[k] === Math.max(...sums)));
+      const again = await t.as(0, { action: 'restart', round: r.body.round });
+      check('팀: 다시 하기 — 팀 그대로', again.body.teams === 2 && JSON.stringify(again.body.players.map((p) => p.team)) === JSON.stringify(r.body.players.map((p) => p.team)));
+    }
+    {
+      // 빙고 팀전 = 팀원 중 누구든 (teamMode any), AI 만 4명 2팀
+      const t = table(Bi.handle, 1, 3, 4, { teams: 2 });
+      let r = await t.open(); r = await t.start();
+      const b0 = [...Array(25)].map((_, i) => i + 1);
+      await t.as(0, { action: 'ready', board: b0 });
+      let guard = 0;
+      while (r.body.stage !== 'done' && guard++ < 200) {
+        if (r.body.yourTurn) r = await t.as(0, { action: 'call', n: b0.find((x) => !r.body.called.includes(x)) });
+        else r = await t.poll(0);
+      }
+      const tm = r.body.team;
+      check('팀 빙고: 끝 — 이긴 사람이 든 팀이 이긴다', r.body.stage === 'done' && tm && tm.mode === 'any'
+        && tm.winners.every((k) => r.body.winners.some((i) => r.body.players[i].team === k)), JSON.stringify([r.body.winners, tm && tm.winners]));
+    }
+    {
+      // 마블 팀전 — 팀원 땅은 통행료 없음, 한 팀만 남으면 끝
+      const t = table(Ma.handle, 1, 3, 4, { teams: 2 });
+      let r = await t.open(); r = await t.start();
+      let guard = 0, freeRide = false, paidMate = false;
+      while (r.body.stage === 'play' && guard++ < 3000) {
+        if (r.body.yourTurn) {
+          const act = r.body.state === 'roll' ? 'roll' : r.body.state === 'buy' ? 'buy' : 'build';
+          r = await t.as(0, { action: act }); if (r.status !== 200) { check('팀 마블: 사람 수 오류', false, r.body.error); break; }
+        } else r = await t.poll(0);
+        for (const l of r.body.log) {
+          if (/팀원.*통행료 없음/.test(l.text)) freeRide = true;
+          const m = /\((.+?)\) 통행료/.exec(l.text);
+          if (m) { const owner = r.body.players.findIndex((p) => p.name === m[1]); if (owner >= 0 && r.body.players[owner].team === r.body.players[l.by].team) paidMate = true; }
+        }
+      }
+      check('팀 마블: 끝까지 간다', r.body.stage === 'done' && r.body.team, 'stage=' + r.body.stage);
+      check('팀 마블: 팀원 땅에선 통행료를 안 낸다', freeRide && !paidMate, JSON.stringify({ freeRide, paidMate }));
+    }
   } catch (e) { check('예외 없이 끝난다', false, e.stack || String(e)); }
   console.log(failures ? `\n실패 ${failures}` : '\n전부 통과');
   process.exit(failures ? 1 : 0);

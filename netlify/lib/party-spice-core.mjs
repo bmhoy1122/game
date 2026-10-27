@@ -7,7 +7,7 @@
  *   · 기권한 사람의 손패·낙타는 그대로 두고 차례에서만 뺀다.
  * 손패·덱은 공용 문서에 두고 view 가 내 것만 보낸다(남은 장수만). 보너스 값은 끝날 때까지 개수만.
  */
-import { handleParty, turnSeat, ranking, roundRng, shuffle } from './party-kit.mjs';
+import { handleParty, turnSeat, ranking, roundRng, shuffle, oneSideLeft } from './party-kit.mjs';
 
 export const GOODS = ['d', 'g', 's', 'c', 'p', 'l'];
 export const CAMEL = 'k';
@@ -73,7 +73,7 @@ export function winnersOf(g, active) {
 
 export function status(ctx) {
   const { room, active } = ctx, g = room.g;
-  const over = g.over || (active.length <= 1 ? 'alone' : null);
+  const over = g.over || (oneSideLeft(room, active) ? 'alone' : null);   // 팀전이면 한 팀만 남아도 끝
   if (over) return { phase: 'done', turn: null, winners: winnersOf(g, active), reason: over };
   return { phase: 'play', turn: turnSeat(room, g.n), winners: null, reason: null };
 }
