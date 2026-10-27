@@ -1,9 +1,9 @@
 /* 여럿이 빙고 (2~8명) — 커플 빙고를 party-kit 위에 올린 것.
  * 각자 1~25 를 섞은 판. 차례대로 숫자를 부르면 **모든 판**에 체크. 가로·세로·대각 3줄을 먼저 만든 사람이 이긴다
- * (같은 수에 여럿이 되면 공동 우승). 25개를 다 불렀는데 아무도 3줄이 아니면 줄 수가 가장 많은 사람.
+ * (같은 수에 여럿이 되면 공동 우승). 팀전이면 팀원 중 누구든 먼저 3줄을 만든 팀이 이긴다(kit teamMode 'any'). 25개를 다 불렀는데 아무도 3줄이 아니면 줄 수가 가장 많은 사람.
  * 판·준비는 각자 자기 문서에, 부른 숫자는 공용 문서에(차례제). 남의 판은 끝날 때까지 안 보낸다 — 줄 수만.
  */
-import { handleParty, turnSeat, ranking, shuffle } from './party-kit.mjs';
+import { handleParty, turnSeat, ranking, shuffle, oneSideLeft } from './party-kit.mjs';
 
 export const SIZE = 5, CELLS = 25, WIN_LINES = 3;
 export const LINES = (() => {
@@ -39,7 +39,7 @@ export function status(ctx) {
   const bingo = active.filter((i) => lines[i] >= WIN_LINES);
   let winners = null;
   if (bingo.length) winners = bingo;
-  else if (room.called.length >= CELLS || active.length <= 1) {
+  else if (room.called.length >= CELLS || oneSideLeft(room, active)) {
     const best = Math.max(...active.map((i) => lines[i]));
     winners = active.filter((i) => lines[i] === best);
   }
@@ -100,6 +100,7 @@ export function botMove(ctx, rnd = Math.random) {
 
 export const partyBingo = {
   setup, view, actions, bot: botMove, quick: ['ready'],
+  teamMode: 'any',                       // 팀전: 팀원 중 누구든 먼저 3줄이면 그 팀 승
   finished: (ctx) => status(ctx).phase === 'done',
 };
 export const handle = (body, store, now) => handleParty(partyBingo, body, store, now);

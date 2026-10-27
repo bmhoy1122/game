@@ -7,7 +7,9 @@
  *     maxDefault: 4,
  *     render(st, el, P),                   // 게임 화면 그리기 (play 단계). el = #game. P = Party 핸들
  *   })
- * 서버가 주는 공통 상태: code · round · you · host · phase(lobby|play) · max · players[{name,bot,out,me}] · first
+ * 서버가 주는 공통 상태: code · round · you · host · phase(lobby|play) · max · players[{name,bot,out,me,team}] · first · teams
+ * 팀전: 홈에서 팀 수(개인전·2·3·4팀, cfg.teamOptions 로 좁힘), 대기실에서 방장이 사람을 눌러 팀을 옮기거나 섞는다.
+ *       끝나면 서버가 붙인 st.team(이긴 팀·팀 점수)을 위에, 개인 순위를 아래에 보여준다. P.team(i) 은 그 사람 팀 번호.
  * 게임 상태는 그 뒤에 섞여 온다 (stage: setup|play|done, turn, yourTurn, winners, rank …).
  *
  * 홈(이름·인원·AI·만들기·들어가기) → 대기실(코드·사람들·AI 넣기·시작) → 게임(#game) → 끝(순위·다시 하기)
@@ -28,6 +30,7 @@
     return name + (batchim ? a : b);
   }
   const COLORS = ['#e8507f', '#2f80ed', '#27ae60', '#f2994a', '#9b51e0', '#eb5757', '#00b5ad', '#8d6e63'];
+  const TEAM_NAMES = ['빨강팀', '파랑팀', '초록팀', '노랑팀'], TEAM_COLORS = ['#e5484d', '#2f6fed', '#2ea44f', '#e3a008'], TEAM_ICONS = ['🔴', '🔵', '🟢', '🟡'];
 
   const css = `
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -71,6 +74,14 @@
   .rank .r b{min-width:30px} .rank .r .sc{margin-left:auto;font-weight:900}
   .log{font-size:12px;color:var(--mute,#6b7280);line-height:1.5;max-height:120px;overflow:auto}
   .log b{color:var(--ink,#2b2b33)}
+  .tm{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:900;padding:2px 7px;border-radius:999px;color:#fff;flex:none}
+  .pl.tap{cursor:pointer} .pl.tap:active{transform:scale(.98)}
+  .teamrow{display:flex;gap:6px;margin:6px 0} .teamrow button{flex:1;padding:9px 4px;font-size:13px;border:2px solid transparent}
+  .teamrow button.on{border-color:var(--accent,#2f80ed);background:#fff;color:var(--accent,#2f80ed)}
+  .teamhint{font-size:12px;font-weight:700;color:var(--mute,#6b7280);text-align:center;margin:2px 0 6px}
+  .chip.t0{box-shadow:inset 0 -3px 0 #e5484d} .chip.t1{box-shadow:inset 0 -3px 0 #2f6fed} .chip.t2{box-shadow:inset 0 -3px 0 #2ea44f} .chip.t3{box-shadow:inset 0 -3px 0 #e3a008}
+  .tres{display:flex;flex-direction:column;gap:5px;margin:6px 0 4px} .tres .r{display:flex;gap:8px;align-items:center;padding:8px 10px;border-radius:10px;color:#fff;font-weight:800;font-size:14px}
+  .tres .r .sc{margin-left:auto;font-weight:900} .tres .r small{font-weight:700;opacity:.9}
   .toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#1c2430;color:#fff;padding:10px 14px;border-radius:12px;font-size:13px;font-weight:700;z-index:40;box-shadow:0 10px 26px rgba(0,0,0,.3);max-width:92%}
   `;
 
@@ -88,6 +99,7 @@
         <h2>방 만들기</h2>
         <input id="pt-name" maxlength="8" placeholder="내 이름 (선택)" autocomplete="off">
         <div class="row"><div><div class="lbl">최대 인원</div><select id="pt-max"></select></div><div><div class="lbl">AI 상대</div><select id="pt-bots"></select></div></div>
+        <div class="lbl">개인전 · 팀전</div><select id="pt-teams"></select>
         <div style="height:10px"></div>
         <button type="button" class="primary" id="pt-create">새 방 만들기</button>
         <div style="height:8px"></div>
@@ -99,6 +111,7 @@
       </section>
       <section class="card hide" id="pt-lobby">
         <div class="codebox"><div class="t">방 코드 — 같이 할 사람에게 알려줘요</div><div class="n" id="pt-code"></div><div class="t" id="pt-cnt"></div></div>
+        <div id="pt-teambox" class="hide"><div class="teamrow" id="pt-teamrow"></div><div class="teamhint" id="pt-teamhint"></div></div>
         <div class="plist" id="pt-plist"></div>
         <div class="row" id="pt-hostrow"><button type="button" id="pt-addbot">🤖 AI 넣기</button><button type="button" id="pt-rmbot">AI 빼기</button></div>
         <div style="height:8px"></div>
@@ -108,6 +121,7 @@
       <section class="hide" id="pt-game" style="display:flex;flex-direction:column;gap:10px"></section>
       <section class="card hide result" id="pt-result">
         <div class="big" id="pt-winner"></div>
+        <div class="tres hide" id="pt-tres"></div>
         <div class="rank" id="pt-rank"></div>
         <div id="pt-final"></div>
         <button type="button" class="primary" id="pt-again">다시 하기</button>
@@ -117,6 +131,14 @@
     const $ = (id) => document.getElementById(id);
     for (let m = 2; m <= 8; m++) $('pt-max').insertAdjacentHTML('beforeend', `<option value="${m}" ${m === (cfg.maxDefault || 4) ? 'selected' : ''}>${m}명</option>`);
     for (let b = 0; b <= 7; b++) $('pt-bots').insertAdjacentHTML('beforeend', `<option value="${b}">${b ? b + '명' : '없음'}</option>`);
+    const TEAM_OPTS = cfg.teamOptions || [0, 2, 3, 4];
+    const teamLabel = (n) => (n ? n + '팀 팀전' : '개인전');
+    TEAM_OPTS.forEach((n) => $('pt-teams').insertAdjacentHTML('beforeend', `<option value="${n}">${teamLabel(n)}</option>`));
+    if (TEAM_OPTS.length === 1) $('pt-teams').disabled = true;
+    // 대기실 팀 버튼 — 한 번만 만든다
+    TEAM_OPTS.forEach((n) => { const b = document.createElement('button'); b.type = 'button'; b.dataset.n = n; b.textContent = teamLabel(n); b.onclick = () => P.act('teams', { n }); $('pt-teamrow').appendChild(b); });
+    if (TEAM_OPTS.some((n) => n)) { const b = document.createElement('button'); b.type = 'button'; b.id = 'pt-shuffle'; b.textContent = '🔀 섞기'; b.onclick = () => P.act('shuffleteams'); $('pt-teamrow').appendChild(b); }
+    const teamTag = (t) => (t === null || t === undefined ? '' : `<span class="tm" style="background:${TEAM_COLORS[t]}">${TEAM_ICONS[t]} ${TEAM_NAMES[t]}</span>`);
 
     let S = { code: null, token: null, you: null, name: '' };
     let st = null, timer = null, busy = false, toldCode = null, toastT = null;
@@ -125,6 +147,8 @@
       esc, jo, COLORS, color: (i) => COLORS[i % COLORS.length],
       get st() { return st; }, get S() { return S; }, $,
       name: (i) => (st && st.players[i] ? st.players[i].name || ('플레이어' + (i + 1)) : '?'),
+      team: (i) => (st && st.teams && st.players[i] ? st.players[i].team : null),
+      TEAM_NAMES, TEAM_COLORS, TEAM_ICONS, teamTag,
       me: () => (st && st.players[S.you] ? st.players[S.you].name : S.name) || '나',
       act: (action, extra) => act(async () => adopt(await api(action, extra))),
       toast, err,
@@ -177,7 +201,7 @@
     }
     function renderTop() {
       const top = $('pt-top');
-      top.innerHTML = st.players.map((p, i) => `<span class="chip${p.me ? ' me' : ''}${st.turn === i && st.stage === 'play' ? ' turn' : ''}${p.out ? ' out' : ''}"><span class="dot" style="background:${COLORS[i % COLORS.length]}"></span>${esc(p.name || '플레이어' + (i + 1))}${i === st.host ? ' 👑' : ''}</span>`).join('')
+      top.innerHTML = st.players.map((p, i) => `<span class="chip${p.me ? ' me' : ''}${st.turn === i && st.stage === 'play' ? ' turn' : ''}${p.out ? ' out' : ''}${st.teams ? ' t' + p.team : ''}"><span class="dot" style="background:${COLORS[i % COLORS.length]}"></span>${esc(p.name || '플레이어' + (i + 1))}${i === st.host ? ' 👑' : ''}</span>`).join('')
         + (cfg.rules ? '<button type="button" class="small-rules" id="pt-rules2">📖</button>' : '') + '<button type="button" class="leave" id="pt-leave">' + (st.phase === 'lobby' ? '나가기' : '기권하고 나가기') + '</button>';
       if (cfg.rules && rules) $('pt-rules2').onclick = rules.open;
       $('pt-leave').onclick = leave;
@@ -191,8 +215,18 @@
         $('pt-sub').textContent = '방 ' + st.code + ' · 사람을 모으는 중';
         $('pt-code').textContent = st.code;
         $('pt-cnt').textContent = st.players.length + ' / ' + st.max + '명' + (st.players.length < 2 ? ' · 두 명은 있어야 시작해요' : '');
-        $('pt-plist').innerHTML = st.players.map((p, i) => `<div class="pl"><span class="dot" style="background:${COLORS[i % COLORS.length]}"></span>${esc(p.name || '플레이어' + (i + 1))}${p.bot ? ' 🤖' : ''}<span class="tag">${i === st.host ? '방장' : p.me ? '나' : ''}</span></div>`).join('');
         const host = st.host === S.you;
+        const canTeam = TEAM_OPTS.length > 1 || TEAM_OPTS[0] > 0;
+        $('pt-teambox').classList.toggle('hide', !(canTeam && (host || st.teams)));
+        $('pt-teamrow').classList.toggle('hide', !host);
+        [...$('pt-teamrow').querySelectorAll('button[data-n]')].forEach((b) => b.classList.toggle('on', +b.dataset.n === (st.teams || 0)));
+        if ($('pt-shuffle')) $('pt-shuffle').classList.toggle('hide', !st.teams);
+        $('pt-teamhint').textContent = st.teams ? (host ? '사람을 누르면 다른 팀으로 옮겨요 · 차례는 팀을 번갈아 돌아요' : st.teams + '팀 팀전 — 팀은 방장이 정해요') : (host ? '팀전으로 하려면 팀 수를 골라요' : '');
+        // 팀전이면 팀끼리 모아서 보여준다
+        const seats = st.players.map((_, i) => i);
+        if (st.teams) seats.sort((a, b) => st.players[a].team - st.players[b].team || a - b);
+        $('pt-plist').innerHTML = seats.map((i) => { const p = st.players[i]; return `<div class="pl${host && st.teams ? ' tap' : ''}" data-i="${i}">${st.teams ? teamTag(p.team) : ''}<span class="dot" style="background:${COLORS[i % COLORS.length]}"></span>${esc(p.name || '플레이어' + (i + 1))}${p.bot && !/🤖/.test(p.name) ? ' 🤖' : ''}<span class="tag">${i === st.host ? '방장' : p.me ? '나' : ''}</span></div>`; }).join('');
+        if (host && st.teams) $('pt-plist').querySelectorAll('.pl').forEach((el) => { el.onclick = () => { const i = +el.dataset.i; P.act('setteam', { seat: i, team: (st.players[i].team + 1) % st.teams }); }; });
         $('pt-hostrow').classList.toggle('hide', !host); $('pt-start').classList.toggle('hide', !host);
         $('pt-start').disabled = st.players.length < 2;
         $('pt-wait').textContent = host ? '' : jo(P.name(st.host), '이', '가') + ' 시작하면 바로 열려요 (이 화면을 켜두세요)';
@@ -202,8 +236,17 @@
         show('pt-result');
         const w = (st.winners || []).map((i) => P.name(i));
         $('pt-sub').textContent = '방 ' + st.code + ' · ' + st.round + '판 끝';
-        $('pt-winner').textContent = (st.winners && st.winners.includes(S.you) ? '🎉 ' : '') + (w.length > 1 ? w.join(' · ') + ' 공동 우승' : w[0] + ' 우승');
-        $('pt-rank').innerHTML = (st.rank || []).map((r) => `<div class="r"><b>${r.rank}등</b><span class="dot" style="width:10px;height:10px;border-radius:50%;background:${COLORS[r.i % COLORS.length]}"></span>${esc(P.name(r.i))}${r.i === S.you ? ' (나)' : ''}<span class="sc">${r.s}</span></div>`).join('');
+        if (st.teams && st.team) {
+          const tw = st.team.winners, myTeam = st.players[S.you] && st.players[S.you].team;
+          const tn = tw.map((k) => TEAM_ICONS[k] + ' ' + TEAM_NAMES[k]);
+          $('pt-winner').textContent = (tw.includes(myTeam) ? '🎉 ' : '') + (tn.length > 1 ? tn.join(' · ') + ' 공동 우승' : tn[0] + ' 우승') + (tw.includes(myTeam) ? ' — 우리 팀!' : '');
+          $('pt-tres').innerHTML = st.team.rank.map((r) => `<div class="r" style="background:${TEAM_COLORS[r.i]}"><b>${r.rank}등</b>${TEAM_ICONS[r.i]} ${TEAM_NAMES[r.i]} <small>${st.team.members[r.i].map((i) => esc(P.name(i))).join(' · ')}</small><span class="sc">${st.team.mode === 'any' ? (r.s ? '빙고!' : '') : r.s}</span></div>`).join('');
+          $('pt-tres').classList.remove('hide');
+        } else {
+          $('pt-winner').textContent = (st.winners && st.winners.includes(S.you) ? '🎉 ' : '') + (w.length > 1 ? w.join(' · ') + ' 공동 우승' : w[0] + ' 우승');
+          $('pt-tres').classList.add('hide');
+        }
+        $('pt-rank').innerHTML = (st.rank || []).map((r) => `<div class="r"><b>${r.rank}등</b><span class="dot" style="width:10px;height:10px;border-radius:50%;background:${COLORS[r.i % COLORS.length]}"></span>${esc(P.name(r.i))}${r.i === S.you ? ' (나)' : ''}${st.teams ? ' ' + teamTag(st.players[r.i].team) : ''}<span class="sc">${r.s}</span></div>`).join('');
         $('pt-final').innerHTML = cfg.final ? cfg.final(st, P) : '';
         $('pt-again').classList.toggle('hide', st.players[S.you] && st.players[S.you].out);
         poll(); return;
@@ -216,7 +259,7 @@
 
     /* 버튼 */
     const nameNow = () => { S.name = $('pt-name').value.trim(); return S.name; };
-    $('pt-create').onclick = () => act(async () => { nameNow(); adopt(await api('create', { name: S.name, max: +$('pt-max').value, bots: +$('pt-bots').value, ...(cfg.options ? cfg.options() : {}) })); });
+    $('pt-create').onclick = () => act(async () => { nameNow(); adopt(await api('create', { name: S.name, max: +$('pt-max').value, bots: +$('pt-bots').value, teams: +$('pt-teams').value, ...(cfg.options ? cfg.options() : {}) })); });
     $('pt-solo').onclick = () => act(async () => { nameNow(); adopt(await api('create', { name: S.name, max: Math.max(2, +$('pt-max').value), bot: true, ...(cfg.options ? cfg.options() : {}) })); });
     $('pt-join').onclick = () => act(async () => { const c = $('code').value.trim(); if (!/^\d{4}$/.test(c)) throw new Error('네 자리 숫자를 넣어주세요'); nameNow(); S.code = c; adopt(await api('join', { code: c, name: S.name })); });
     ['pt-name', 'code'].forEach((id) => $(id).addEventListener('keydown', (e) => { if (e.key === 'Enter') $(id === 'code' ? 'pt-join' : 'pt-create').click(); }));
@@ -251,5 +294,5 @@
     window.__party = P;                      // 테스트·디버그용 핸들 (P.st 로 지금 상태)
     return P;
   }
-  window.Party = { init, esc, jo, COLORS };
+  window.Party = { init, esc, jo, COLORS, TEAM_NAMES, TEAM_COLORS, TEAM_ICONS };
 })();

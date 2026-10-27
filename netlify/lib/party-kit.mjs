@@ -15,6 +15,14 @@
  *
  * ctx: { room, idx, now, body, me, docs, n(자리 수), active(기권·탈락 아닌 자리들), touchRoom, touchMe }
  * 차례는 kit.turnSeat(room, k) — 활성 자리 중 선공부터 k 번째. 중간에 누가 빠져도 남은 사람끼리 돈다.
+ *
+ * 팀전 (room.teams = 0 개인전 | 2·3·4 팀) — 방장이 대기실에서 정한다. players[i].team = 0..teams-1.
+ *   · 차례는 팀을 번갈아 돈다 (빨강1 → 파랑1 → 빨강2 → 파랑2 …). 인원이 적은 팀은 같은 사람이 더 자주 둔다 —
+ *     팀마다 차례 수가 같아야 공평해서다.
+ *   · 결과: game.teamMode 'sum'(기본) = 팀원 점수(rank 의 s) 합이 큰 팀, 'any' = 팀원 중 누구든 이긴 사람이 있는 팀.
+ *     kit 가 view 에 team = { winners:[팀], scores:[팀별], rank } 를 붙인다. 자리별 winners·rank 는 그대로 둔다.
+ *   · 게임이 "한 명 남으면 끝"을 볼 땐 oneSideLeft(room, seats) — 팀전이면 "한 팀만 남으면 끝".
+ *   · game.teamOptions = 고를 수 있는 팀 수 (기본 [0,2,3,4]). 0 이 없으면 팀전만 되는 게임(팀 오목).
  */
 import { seeded, shuffle, ROOM_TTL } from './room-kit.mjs';
 export { seeded, shuffle, ROOM_TTL };
@@ -34,10 +42,59 @@ export const activeSeats = (room) => room.players.map((_, i) => i).filter((i) =>
 export function turnSeat(room, k) {
   const act = activeSeats(room);
   if (!act.length) return null;
+  if (room.teams) { const o = teamOrder(room, act); return o[k % o.length]; }
   let start = act.indexOf(room.first);
   if (start < 0) start = act.findIndex((i) => i > room.first); if (start < 0) start = 0;
   return act[(start + k) % act.length];
 }
+/* ---- 팀 ---- */
+export const TEAM_NAMES = ['빨강팀', '파랑팀', '초록팀', '노랑팀'];
+export const TEAM_COLORS = ['#e5484d', '#2f6fed', '#2ea44f', '#e3a008'];
+export const teamOf = (room, i) => (room.teams && room.players[i] ? room.players[i].team : null);
+const teamOptions = (game) => game.teamOptions || [0, 2, 3, 4];
+/* 지금 사람이 가장 적은 팀 (같으면 앞 팀) */
+function smallestTeam(room) {
+  const cnt = Array(room.teams).fill(0);
+  room.players.forEach((p) => { if (p && Number.isInteger(p.team) && p.team < room.teams) cnt[p.team]++; });
+  return cnt.indexOf(Math.min(...cnt));
+}
+function setTeams(room, n) {
+  room.teams = n;
+  room.players.forEach((p, i) => { if (n) p.team = i % n; else delete p.team; });
+}
+/* seats 가 한 명뿐이거나(개인전) 다 같은 팀이면(팀전) — 더 겨룰 상대가 없다 */
+export function oneSideLeft(room, seats) {
+  if (seats.length <= 1) return true;
+  if (!room.teams) return false;
+  return new Set(seats.map((i) => teamOf(room, i))).size <= 1;
+}
+/* 팀전 차례 순서 — 선공의 팀부터, 팀마다 한 명씩 번갈아. 한 바퀴 = 팀 수 × 가장 큰 팀 인원 */
+function teamOrder(room, act) {
+  const teams = [...Array(room.teams)].map((_, t) => act.filter((i) => teamOf(room, i) === t)).filter((m) => m.length);
+  if (!teams.length) return act;
+  let ft = teams.findIndex((m) => m.includes(room.first));
+  if (ft < 0) ft = 0;
+  const rot = [...teams.slice(ft), ...teams.slice(0, ft)];
+  const lead = rot[0], li = Math.max(0, lead.indexOf(room.first));
+  rot[0] = [...lead.slice(li), ...lead.slice(0, li)];
+  const width = Math.max(...rot.map((m) => m.length)), order = [];
+  for (let r = 0; r < width; r++) for (const m of rot) order.push(m[r % m.length]);
+  return order;
+}
+function teamResult(room, gv, mode) {
+  const T = room.teams, members = [...Array(T)].map((_, t) => room.players.map((_, i) => i).filter((i) => teamOf(room, i) === t));
+  const alive = members.map((m) => m.some((i) => !(room.out && room.out[i])));
+  let scores;
+  if (mode === 'any') scores = members.map((m, t) => (alive[t] ? (m.some((i) => (gv.winners || []).includes(i)) ? 1 : 0) : null));
+  else {
+    const byI = {}; (gv.rank || []).forEach((r) => { byI[r.i] = r.s; });
+    scores = members.map((m, t) => (alive[t] ? m.reduce((a, i) => a + (typeof byI[i] === 'number' ? byI[i] : 0), 0) : null));
+  }
+  const rank = ranking(scores);
+  const best = rank.length ? rank[0].s : null;
+  return { winners: rank.filter((r) => r.s === best).map((r) => r.i), scores, rank, members, mode };
+}
+
 export const botSeats = (room) => room.players.map((p, i) => (p && p.bot ? i : -1)).filter((i) => i >= 0);
 const isBot = (room, i) => !!(room.players[i] && room.players[i].bot);
 
@@ -58,10 +115,14 @@ export async function handleParty(game, body, store, now = Date.now()) {
     const base = {
       code: room.code, round: room.round, you: idx, host: room.host, phase: room.phase, max: room.max,
       bot: room.players.some((p) => p.bot),
-      players: room.players.map((p, i) => ({ name: p.name, bot: !!p.bot, out: !!(room.out && room.out[i]), me: i === idx })),
+      players: room.players.map((p, i) => ({ name: p.name, bot: !!p.bot, out: !!(room.out && room.out[i]), me: i === idx, team: room.teams ? p.team : null })),
       first: room.phase === 'play' ? room.first : null,
+      teams: room.teams || 0, teamOptions: teamOptions(game),
     };
-    return room.phase === 'lobby' ? base : { ...base, ...game.view(ctx) };
+    if (room.phase === 'lobby') return base;
+    const gv = game.view(ctx);
+    if (room.teams && gv.stage === 'done') gv.team = teamResult(room, gv, game.teamMode || 'sum');
+    return { ...base, ...gv };
   }
   const ok = (ctx, extra) => ({ status: 200, body: { ...(extra || {}), ...view(ctx) } });
 
@@ -100,8 +161,14 @@ export async function handleParty(game, body, store, now = Date.now()) {
     const token = crypto.randomUUID();
     const room = { code, created: now, round: 1, max, phase: 'lobby', host: 0, players: [{ token, name: cleanName(body.name) }], out: [], lastAt: now };
     room.opts = game.options ? game.options(body || {}) : {};
+    const tn = Number(body.teams), opts = teamOptions(game);
+    room.teams = opts.includes(tn) ? tn : opts.includes(0) ? 0 : opts[0];
+    if (room.teams) room.players[0].team = 0;
     let bots = Number(body.bots) || (body.bot ? 1 : 0);
-    for (let i = 0; i < bots && room.players.length < max; i++) room.players.push({ token: null, name: BOT_NAME + (i ? ' ' + (i + 1) : ''), bot: true });
+    for (let i = 0; i < bots && room.players.length < max; i++) {
+      room.players.push({ token: null, name: BOT_NAME + (i ? ' ' + (i + 1) : ''), bot: true });
+      if (room.teams) room.players[room.players.length - 1].team = smallestTeam(room);
+    }
     if (body.bot && room.players.length >= MIN_SEATS) begin(room);          // 탕비실 '혼자 하기' — AI 하나와 바로 시작
     await store.set(roomKey(code), room);
     return ok(await load(room, 0), { token });
@@ -117,6 +184,7 @@ export async function handleParty(game, body, store, now = Date.now()) {
     if (room.players.length >= room.max) return bad(`자리가 다 찼어요 (${room.max}명)`, 409);
     const token = crypto.randomUUID();
     room.players.push({ token, name: cleanName(body.name) });
+    if (room.teams) room.players[room.players.length - 1].team = smallestTeam(room);
     await store.set(roomKey(code), room);
     return ok(await load(room, room.players.length - 1), { token });
   }
@@ -135,6 +203,10 @@ export async function handleParty(game, body, store, now = Date.now()) {
     if (idx !== room.host) return bad('방장만 시작할 수 있어요', 403);
     if (room.phase !== 'lobby') return bad('이미 시작했어요', 409);
     if (room.players.length < MIN_SEATS) return bad('두 명은 있어야 시작해요. 코드를 알려주거나 AI 를 넣어요', 409);
+    if (room.teams) {
+      const empty = [...Array(room.teams)].findIndex((_, t) => !room.players.some((p) => p.team === t));
+      if (empty >= 0) return bad(`${TEAM_NAMES[empty]}에 아무도 없어요. 사람을 옮기거나 AI 를 넣어요`, 409);
+    }
     begin(room);
     await store.set(roomKey(code), room);
     return ok(await load(room, idx));
@@ -145,6 +217,7 @@ export async function handleParty(game, body, store, now = Date.now()) {
     if (room.players.length >= room.max) return bad('자리가 다 찼어요', 409);
     const k = botSeats(room).length;
     room.players.push({ token: null, name: BOT_NAME + (k ? ' ' + (k + 1) : ''), bot: true });
+    if (room.teams) room.players[room.players.length - 1].team = smallestTeam(room);
     await store.set(roomKey(code), room);
     return ok(await load(room, idx));
   }
@@ -154,6 +227,26 @@ export async function handleParty(game, body, store, now = Date.now()) {
     const last = botSeats(room).pop();
     if (last === undefined) return bad('AI 가 없어요', 409);
     room.players.splice(last, 1);
+    await store.set(roomKey(code), room);
+    return ok(await load(room, idx));
+  }
+  if (act === 'teams' || act === 'setteam' || act === 'shuffleteams') {
+    if (idx !== room.host) return bad('팀은 방장이 정해요', 403);
+    if (room.phase !== 'lobby') return bad('시작한 뒤엔 팀을 못 바꿔요', 409);
+    if (act === 'teams') {
+      const n = Number(body.n);
+      if (!teamOptions(game).includes(n)) return bad('그렇게는 팀을 못 나눠요', 400);
+      setTeams(room, n);
+    } else if (act === 'setteam') {
+      const seat = Number(body.seat), t = Number(body.team);
+      if (!room.teams) return bad('개인전이에요', 409);
+      if (!room.players[seat] || !Number.isInteger(t) || t < 0 || t >= room.teams) return bad('그런 자리나 팀은 없어요', 400);
+      room.players[seat].team = t;
+    } else {
+      if (!room.teams) return bad('개인전이에요', 409);
+      const seats = shuffle(room.players.map((_, i) => i), Math.random);   // 대기실은 방장 혼자 쓰니 seeded 가 아니어도 된다
+      seats.forEach((i, k) => { room.players[i].team = k % room.teams; });
+    }
     await store.set(roomKey(code), room);
     return ok(await load(room, idx));
   }
