@@ -247,7 +247,7 @@
           $('pt-winner').textContent = (st.winners && st.winners.includes(S.you) ? '🎉 ' : '') + (w.length > 1 ? w.join(' · ') + ' 공동 우승' : w[0] + ' 우승');
           $('pt-tres').classList.add('hide');
         }
-        $('pt-rank').innerHTML = (st.rank || []).map((r) => `<div class="r"><b>${r.rank}등</b><span class="dot" style="width:10px;height:10px;border-radius:50%;background:${COLORS[r.i % COLORS.length]}"></span>${esc(P.name(r.i))}${r.i === S.you ? ' (나)' : ''}${st.teams ? ' ' + teamTag(st.players[r.i].team) : ''}<span class="sc">${r.s}</span></div>`).join('');
+        $('pt-rank').innerHTML = (st.rank || []).map((r) => `<div class="r"><b>${r.rank}등</b><span class="dot" style="width:10px;height:10px;border-radius:50%;background:${COLORS[r.i % COLORS.length]}"></span>${esc(P.name(r.i))}${r.i === S.you ? ' (나)' : ''}${st.teams ? ' ' + teamTag(st.players[r.i].team) : ''}<span class="sc">${r.s}${esc(cfg.scoreUnit || '')}</span></div>`).join('');
         $('pt-final').innerHTML = cfg.final ? cfg.final(st, P) : '';
         $('pt-again').classList.toggle('hide', st.players[S.you] && st.players[S.you].out);
         poll(); return;
