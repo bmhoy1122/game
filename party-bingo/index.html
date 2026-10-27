@@ -87,6 +87,7 @@ function render(st, el, P) {
 Party.init({
   game: 'bingo', title: '여럿이 빙고', emoji: '🔢', sub: '2~8명 · 차례대로 숫자를 불러 3줄 먼저', maxDefault: 4,
   rules: { title: '🔢 여럿이 빙고 규칙', html: RULES },
+  teamWinLabel: '빙고!',
   render,
   final: (st, P) => st.boards ? '<div class="boards">' + st.boards.map((b, i) => b ? `<div class="b"><div style="margin-bottom:3px"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${P.color(i)}"></span> ${P.esc(P.name(i))} · ${st.lines[i]}줄</div><div class="g">${b.map((n) => `<span class="${st.called.includes(n) ? 'hit' : ''}">${n}</span>`).join('')}</div></div>` : '').join('') + '</div>' : '',
 });

@@ -10,6 +10,7 @@
  * 서버가 주는 공통 상태: code · round · you · host · phase(lobby|play) · max · players[{name,bot,out,me,team}] · first · teams
  * 팀전: 홈에서 팀 수(개인전·2·3·4팀, cfg.teamOptions 로 좁힘), 대기실에서 방장이 사람을 눌러 팀을 옮기거나 섞는다.
  *       끝나면 서버가 붙인 st.team(이긴 팀·팀 점수)을 위에, 개인 순위를 아래에 보여준다. P.team(i) 은 그 사람 팀 번호.
+ *       팀 줄 오른쪽 글자: cfg.teamScore(st, 팀, P) 가 있으면 그것, 없으면 'sum' 은 점수 · 'any' 는 cfg.teamWinLabel(기본 '승리').
  * 게임 상태는 그 뒤에 섞여 온다 (stage: setup|play|done, turn, yourTurn, winners, rank …).
  *
  * 홈(이름·인원·AI·만들기·들어가기) → 대기실(코드·사람들·AI 넣기·시작) → 게임(#game) → 끝(순위·다시 하기)
@@ -240,7 +241,7 @@
           const tw = st.team.winners, myTeam = st.players[S.you] && st.players[S.you].team;
           const tn = tw.map((k) => TEAM_ICONS[k] + ' ' + TEAM_NAMES[k]);
           $('pt-winner').textContent = (tw.includes(myTeam) ? '🎉 ' : '') + (tn.length > 1 ? tn.join(' · ') + ' 공동 우승' : tn[0] + ' 우승') + (tw.includes(myTeam) ? ' — 우리 팀!' : '');
-          $('pt-tres').innerHTML = st.team.rank.map((r) => `<div class="r" style="background:${TEAM_COLORS[r.i]}"><b>${r.rank}등</b>${TEAM_ICONS[r.i]} ${TEAM_NAMES[r.i]} <small>${st.team.members[r.i].map((i) => esc(P.name(i))).join(' · ')}</small><span class="sc">${st.team.mode === 'any' ? (r.s ? '빙고!' : '') : r.s}</span></div>`).join('');
+          $('pt-tres').innerHTML = st.team.rank.map((r) => `<div class="r" style="background:${TEAM_COLORS[r.i]}"><b>${r.rank}등</b>${TEAM_ICONS[r.i]} ${TEAM_NAMES[r.i]} <small>${st.team.members[r.i].map((i) => esc(P.name(i))).join(' · ')}</small><span class="sc">${esc(cfg.teamScore ? cfg.teamScore(st, r.i, P) : st.team.mode === 'any' ? (r.s ? (cfg.teamWinLabel || '승리') : '') : r.s)}</span></div>`).join('');
           $('pt-tres').classList.remove('hide');
         } else {
           $('pt-winner').textContent = (st.winners && st.winners.includes(S.you) ? '🎉 ' : '') + (w.length > 1 ? w.join(' · ') + ' 공동 우승' : w[0] + ' 우승');
