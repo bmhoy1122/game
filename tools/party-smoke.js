@@ -59,6 +59,10 @@ const lib = (f) => import(path.join(__dirname, '..', 'netlify/lib', f));
       check('kit: 혼자서는 시작 못 함', (await alone.start()).status === 409);
       const solo = table(Bi.handle, 1, 0, 4, { bot: true }); r = await solo.open();
       check('kit: 탕비실 혼자 하기(bot:true)는 AI 하나와 바로 시작', r.body.phase === 'play' && r.body.players.length === 2 && r.body.bot === true);
+      const solo3 = table(Bi.handle, 1, 0, 2, { bot: true, bots: 3 }); r = await solo3.open();
+      check('kit: 혼자 하기 bots:3 — AI 셋과 4명 방으로 바로 시작 (max 가 작아도 늘린다)', r.body.phase === 'play' && r.body.players.length === 4 && r.body.max === 4 && r.body.players.filter((p) => p.bot).length === 3, JSON.stringify({ n: r.body.players.length, max: r.body.max }));
+      const solo9 = table(Bi.handle, 1, 0, 8, { bot: true, bots: 9 }); r = await solo9.open();
+      check('kit: 혼자 하기 bots 는 7명까지', r.body.players.length === 8);
       check('kit: 등수 — 같은 점수는 같은 등수', JSON.stringify(K.ranking([10, 30, 30, null, 5]).map((x) => [x.i, x.rank])) === JSON.stringify([[1, 1], [2, 1], [0, 3], [4, 4]]));
     }
 
