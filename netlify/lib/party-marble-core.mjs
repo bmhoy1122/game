@@ -139,7 +139,7 @@ function land(room, p) {
     else if (card.k === 'cash') { if (card.v >= 0) g.cash[p] += card.v; else pay(room, p, -card.v, null); }
     else if (card.k === 'birthday') { for (const q of aliveSeats(room)) if (q !== p) { const v = Math.min(card.v, g.cash[q]); g.cash[q] -= v; g.cash[p] += v; } }
     else if (card.k === 'donate') { for (const q of aliveSeats(room)) if (q !== p && !g.bankrupt[p]) { const v = Math.min(card.v, g.cash[p]); g.cash[p] -= v; g.cash[q] += v; } }
-    else if (card.k === 'build') { const mine = BOARD.map((b, j) => j).filter((j) => g.own[j] && g.own[j].p === p && b.t === 'city' && g.own[j].lv < 3).sort((a, b) => sq(b).price - sq(a).price); if (mine.length) { g.own[mine[0]].lv++; log(g, `${sq(mine[0]).name} ${LEVELS[g.own[mine[0]].lv]} 완성`, p); } }
+    else if (card.k === 'build') { const mine = BOARD.map((b, j) => j).filter((j) => g.own[j] && g.own[j].p === p && BOARD[j].t === 'city' && g.own[j].lv < 3).sort((a, b) => sq(b).price - sq(a).price); if (mine.length) { g.own[mine[0]].lv++; log(g, `${sq(mine[0]).name} ${LEVELS[g.own[mine[0]].lv]} 완성`, p); } }
     else if (card.k === 'tofund') { moveTo(room, p, 14); return land(room, p); }
   }
 }
