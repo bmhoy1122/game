@@ -168,12 +168,15 @@ export async function handleParty(game, body, store, now = Date.now()) {
     const tn = Number(body.teams), opts = teamOptions(game);
     room.teams = opts.includes(tn) ? tn : opts.includes(0) ? 0 : opts[0];
     if (room.teams) room.players[0].team = 0;
-    let bots = Number(body.bots) || (body.bot ? 1 : 0);
+    let bots = Math.max(0, Math.min(MAX_SEATS - 1, Number(body.bots) || 0));
+    if (body.bot) { bots = Math.max(1, bots); if (max < bots + 1) { max = bots + 1; room.max = max; } }   // 혼자 하기 — AI 수만큼 자리를 늘린다
     for (let i = 0; i < bots && room.players.length < max; i++) {
       room.players.push({ token: null, name: BOT_NAME + (i ? ' ' + (i + 1) : ''), bot: true });
       if (room.teams) room.players[room.players.length - 1].team = smallestTeam(room);
     }
-    if (body.bot && room.players.length >= MIN_SEATS) begin(room);          // 탕비실 '혼자 하기' — AI 하나와 바로 시작
+    // 바로 시작하는데 사람이 팀 수보다 적으면 빈 팀이 생긴다 — 팀전만 되는 게임이 아니면 개인전으로
+    if (body.bot && room.teams && room.players.length < room.teams) setTeams(room, opts.includes(0) ? 0 : room.teams);
+    if (body.bot && room.players.length >= MIN_SEATS) begin(room);          // 탕비실·홈 '혼자 하기' — AI 들과 바로 시작
     await store.set(roomKey(code), room);
     return ok(await load(room, 0), { token });
   }
