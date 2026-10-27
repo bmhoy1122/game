@@ -16,6 +16,10 @@
 | `couple-tiles/` | 비밀 타일 — 다빈치 코드 방식 숫자 타일 추리 | `/api/tiles` |
 | `couple-expedition/` | 탐험대 — 로스트 시티 방식 카드 게임 (탐험로에 오름차순으로 쌓기) | `/api/expedition` |
 | `couple-backgammon/` | 백개먼 — 주사위로 말 15개 먼저 빼내기 | `/api/backgammon` |
+| `party-bingo/` | 여럿이 빙고 — 2~8명 | `/api/party-bingo` |
+| `party-spice/` | 여럿이 향신료 시장 — 2~8명, 덱을 여러 벌 | `/api/party-spice` |
+| `party-expedition/` | 여럿이 탐험대 — 2~8명, 덱을 여러 벌 | `/api/party-expedition` |
+| `party-marble/` | 마블 — 모노폴리·부루마불 방식 부동산 보드게임, 2~8명 | `/api/party-marble` |
 
 **3장부터 8장까지는 전부 「밤」 게임 이야기다.** 커플 게임 아홉은 9장에 따로 적었다.
 
@@ -74,6 +78,7 @@
 │  ├─ bot-smoke.js       혼자 하기(AI 상대) 테스트 — 앞의 네 게임 끝까지
 │  ├─ {spice,tiles,expedition,backgammon}-smoke.js   보드게임 넷 규칙·봇 테스트
 │  ├─ wordbingo-smoke.js 단어 빙고 규칙·봇 테스트
+│  ├─ party-smoke.js     여럿이 하는 방(party-kit) + 네 게임 테스트
 │  └─ couple-dev.js      커플 게임 아홉 로컬 서버
 ├─ netlify/
 │  ├─ functions/         함수 껍데기만. 파일 하나 = 함수 하나 (커플 게임 하나에 하나씩)
@@ -87,7 +92,9 @@
 ├─ couple-baseball/      index.html 한 파일
 ├─ couple-gomoku/        index.html 한 파일
 ├─ couple-{spice,tiles,expedition,backgammon}/   보드게임 넷, 각각 index.html 한 파일
-└─ couple-common/        picker.js — 선 정하기 화면 · rules.js — 규칙 설명 창
+├─ couple-common/        picker.js — 선 정하기 화면 · rules.js — 규칙 설명 창
+├─ party-{bingo,spice,expedition,marble}/   여럿이(2~8명) 게임 넷 — 10장
+└─ party-common/         party.js — 여럿이 게임 공용 화면(홈·대기실·폴링)
 ```
 
 넷리파이는 `main` 브랜치를 배포한다. 실험은 다른 브랜치에서 하고
@@ -429,6 +436,37 @@ GRAV = 0.6          GRAB_HOLD = 20     (Z 꾹 → 안기, 약 0.33초)
   선 정하기(`first-pick.pickBot`) — 아무 손. 하나빼기 두 손은 서로 다르게. 랜덤(coin)은 낼 게 없다.
 - 다시 하기(restart)는 공용 문서만 고치므로 봇 자리가 그대로 남는다. 테스트: `node tools/bot-smoke.js`.
 - 봇 방에서는 `tellOpener` 가 `bot:true` 를 같이 보내 탕비실이 초대를 띄우지 않는다.
+
+## 10. 여럿이 하는 게임 (`party-*/`, 2~8명)
+
+커플 게임은 자리가 둘이라 `room-kit` 를 그대로 두고, 여덟 자리 **`netlify/lib/party-kit.mjs`** 를 따로 만들었다(2026-10, 탕비실 요청
+"향신료·탐험대·빙고를 2~8인으로, 모노폴리도"). 위에 올라간 게임 넷: `party-bingo` · `party-spice` · `party-expedition` · `party-marble`.
+
+- **흐름**: 방 만들기(방장, 최대 인원 2~8, AI 수) → 코드로 들어오기 / 방장이 `addbot`·`removebot` → 방장이 `start` → 게임 → 끝 → `restart`.
+  `create` 에 `bot:true` 면(탕비실 '혼자 하기' `?bot=1`) AI 하나와 바로 시작한다. 시작한 뒤엔 못 들어온다. 방장은 로비에서 못 나간다(방은 12시간 뒤 만료).
+- **저장**: `room:<code>` 공용 + `room:<code>:p<i>` 자리별 문서, 원칙은 room-kit 와 같다. 들어오기는 로비에서만이라 같은 순간 둘이 들어오면
+  한 명이 묻힐 수 있다(드묾) — 그 사람은 다시 들어오면 된다.
+- **차례**: `turnSeat(room, k)` = 활성 자리(기권·탈락 아닌) 중 선공 `room.first`(seeded)부터 k 번째. 중간에 누가 빠져도 남은 사람끼리 돈다.
+  `resign` 은 공용 문서의 `room.out[i]` — 게임이 `onOut(room, i)` 로 뒷정리(탐험대: 걸음 정리, 마블: 파산 처리).
+- **봇**: room-kit 와 같이 사람의 요청을 처리할 때 `BOT_DELAY` 뒤 움직인다. 봇 자리를 차례로 보며 `game.bot(ctx)` 가 수를 주는 봇 하나만 —
+  단, `game.quick` 에 든 행동(빙고 '준비')은 한 요청에 봇 여럿이 다 한다. 차례를 넘기는 행동은 한 요청에 하나(줄줄이 두지 않게).
+- **응답 공통**: `code round you host phase(lobby|play) max bot players[{name,bot,out,me}] first` + 게임 것(`stage: setup|play|done`, `turn`,
+  `yourTurn`, `winners[]`, `rank[{i,s,rank}]`). 공동 우승이 있다(같은 점수).
+- **규칙 차이**: 빙고 = 커플 빙고 그대로(판·준비는 자기 문서, 끝나면 `boards` 공개). 향신료·탐험대 = 덱(과 토큰)을 `decksFor(n)` =
+  ⌈n/2⌉ 벌 겹침, 낙타 보너스는 **혼자** 가장 많을 때만, 탐험대는 버림 더미를 모두가 같이 쓴다. 두 봇은 2인용 봇과 같고 탐험대 봇은
+  '남에게 도움' 을 모든 상대 중 최댓값으로 본다.
+- **마블** (`party-marble-core.mjs`): 28칸(한 변 7, 모서리 출발·무인도·복지기금·복권), 도시 18 = 6색×3 + 항만·공항, 황금열쇠 3, 세금 1.
+  돈 단위 '만', 시작 1500, 월급 200. 주사위·황금열쇠·복권은 seeded(`코드:판:굴린 횟수`). 더블은 한 번 더, 세 번 연속은 무인도(두 차례,
+  더블이면 탈출). 통행료 = 가격 × [0.1, 0.3, 0.7, 1.5][건물], 같은 색 셋이면 2배, 항만·공항은 20/40. 못 내면 비싼 자산부터 반값 자동 매각,
+  그래도 모자라면 파산(땅은 은행으로). 끝 = 한 명 남거나 차례 n×20 → 총자산(현금+땅값+건물값) 순. `state`: roll → (buy|build) → 다음.
+  봇은 현금 여유(150/200)를 보고 사고 짓는다. 비밀 없음.
+- **화면**: `party-common/party.js` 하나가 홈·대기실·상단 칩·끝 화면·폴링·저장·`?name/?code/?bot=1`·`tellOpener` 를 다 한다.
+  게임 페이지는 `Party.init({ game, title, rules, render(st, el, P), final })` 만 — `render` 는 play 단계 DOM 을 한 번 만들고 내용만 바꾼다.
+  `P.act(action, body)`, `P.name(i)`, `P.color(i)`, `P.jo`, `P.toast`. `window.__party.st` 가 지금 상태(테스트용).
+  ⚠️ `querySelector('#c+')` 같은 id 는 CSS 선택자로 못 쓴다 — 영문·숫자만. render 안 예외는 party.js 가 잡아 화면에 띄운다.
+- **테스트**: `node tools/party-smoke.js` (kit 규칙 + 네 게임을 2~8명·봇 섞어 끝까지, 비밀 노출 검사, 기권, 다시 하기). 브라우저는
+  `node tools/couple-dev.js` 뒤 `/party-<게임>/?bot=1` 로 혼자 한 판, 탭 둘로 코드 들어오기.
+- 탕비실(메신저)에는 이 넷을 복사해 빙고·향신료·탐험대의 2인용 대신 걸었다. 초대 코드는 2~8명 모두에게 같은 방식으로 간다.
 
 ### 탕비실(신영 메신저) 연결
 
