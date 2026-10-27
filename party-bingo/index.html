@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1">
+<meta name="theme-color" content="#1f3d7a">
+<title>여럿이 빙고</title>
+<style>
+  :root{--accent:#2f80ed;--soft:#e9f1fd;--ink:#1b2a44;--mute:#5d6b84;--line:#d6e0ef;--bg:radial-gradient(120% 80% at 50% 0%,#5aa0ff 0%,#1f3d7a 60%,#0f1f44 100%);
+    --pk-accent:#2f80ed;--pk-soft:#e9f1fd;--pk-ink:#1b2a44;--pk-line:#d6e0ef}
+  .grid{display:grid;grid-template-columns:repeat(5,1fr);gap:5px}
+  .cell{aspect-ratio:1;border-radius:10px;background:#f3f6fb;border:2px solid #e2e8f2;display:grid;place-items:center;font-weight:900;font-size:18px;color:#1b2a44;cursor:pointer;user-select:none;position:relative}
+  .cell.hit{background:#2f80ed;color:#fff;border-color:#2f80ed}
+  .cell.line{background:#ffd166;color:#5a2a10;border-color:#ffb703}
+  .cell.last::after{content:'';position:absolute;inset:-4px;border-radius:12px;border:3px solid #ff6b6b}
+  .cell.can:hover{border-color:#2f80ed}
+  .mini{display:flex;flex-direction:column;gap:6px}
+  .mini .r{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700}
+  .mini .bar{flex:1;height:8px;border-radius:4px;background:#e9eef6;overflow:hidden}
+  .mini .bar i{display:block;height:100%;background:var(--accent)}
+  .called{display:flex;flex-wrap:wrap;gap:4px}
+  .called span{width:28px;height:28px;border-radius:7px;background:#e9eef6;display:grid;place-items:center;font-size:12px;font-weight:800;color:#5d6b84}
+  .called span.on{background:#1b2a44;color:#fff}
+  .boards{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px}
+  .boards .b{font-size:11px} .boards .g{display:grid;grid-template-columns:repeat(5,1fr);gap:2px} .boards .g span{aspect-ratio:1;display:grid;place-items:center;border-radius:4px;background:#f3f6fb;font-size:9px;font-weight:800}
+  .boards .g span.hit{background:#2f80ed;color:#fff}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script src="../couple-common/rules.js"></script>
+<script src="../party-common/party.js"></script>
+<script>
+const RULES = `
+<h3>한눈에</h3><p>각자 1~25 가 섞인 5×5 판을 갖고, 차례대로 숫자를 하나씩 불러요. 부른 숫자는 <b>모든 사람 판</b>에서 지워져요. 가로·세로·대각선 <b>3줄</b>을 먼저 만든 사람이 이겨요 (같은 순간에 여럿이면 공동 우승).</p>
+<h3>준비</h3><p>판은 저절로 섞여요. 마음에 안 들면 <b>섞기</b>를 눌러요. 모두 <b>준비</b>를 누르면 시작.</p>
+<h3>내 차례</h3><p>내 판에서 <b>아직 안 나온 숫자</b>를 눌러 불러요. 내 줄을 채우면서 남에게 덜 이로운 숫자를 고르는 게 요령이에요.</p>
+<h3>끝</h3><p>누가 3줄이 되면 끝. 25개를 다 불렀는데 아무도 3줄이 아니면 줄이 가장 많은 사람이 이겨요.</p>`;
+const SIZE = 5, CELLS = 25;
+const LINES = (() => { const o = []; for (let r = 0; r < 5; r++) o.push([0, 1, 2, 3, 4].map((c) => r * 5 + c)); for (let c = 0; c < 5; c++) o.push([0, 1, 2, 3, 4].map((r) => r * 5 + c)); o.push([0, 6, 12, 18, 24]); o.push([4, 8, 12, 16, 20]); return o; })();
+let draft = null, built = false, lastCalled = -1;
+const shuffled = () => { const a = [...Array(CELLS)].map((_, i) => i + 1); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+
+function build(el) {
+  el.innerHTML = `
+    <div class="banner" id="bn"></div>
+    <section class="card"><h2 id="bt">내 판</h2><div class="grid" id="grid"></div>
+      <div class="row" id="setup-row" style="margin-top:10px"><button type="button" id="b-shuffle">🔀 섞기</button><button type="button" class="primary" id="b-ready">준비 완료</button></div>
+    </section>
+    <section class="card"><h2>줄 수</h2><div class="mini" id="mini"></div></section>
+    <section class="card"><h2>나온 숫자</h2><div class="called" id="called"></div></section>`;
+  for (let i = 0; i < CELLS; i++) { const c = document.createElement('div'); c.className = 'cell'; c.dataset.i = i; el.querySelector('#grid').appendChild(c); }
+  for (let n = 1; n <= CELLS; n++) { const s = document.createElement('span'); s.textContent = n; s.dataset.n = n; el.querySelector('#called').appendChild(s); }
+  built = true;
+}
+function render(st, el, P) {
+  if (!built) build(el);
+  const $ = (id) => el.querySelector('#' + id);
+  const setup = st.stage === 'setup';
+  if (setup && !st.ready && !draft) draft = shuffled();
+  const board = st.board || draft;
+  const called = new Set(st.called);
+  const lineCells = new Set();
+  if (board) for (const line of LINES) if (line.every((i) => called.has(board[i]))) line.forEach((i) => lineCells.add(i));
+  $('bt').textContent = setup ? (st.ready ? '내 판 (준비 완료 — 다른 사람 기다리는 중)' : '내 판 — 섞고 준비를 눌러요') : '내 판' + (st.yourTurn ? ' — 부를 숫자를 눌러요' : '');
+  $('setup-row').classList.toggle('hide', !setup || st.ready);
+  el.querySelectorAll('.cell').forEach((c, i) => {
+    const n = board ? board[i] : '';
+    c.textContent = n;
+    c.className = 'cell' + (called.has(n) ? ' hit' : '') + (lineCells.has(i) ? ' line' : '') + (n === st.last ? ' last' : '') + (st.yourTurn && !called.has(n) ? ' can' : '');
+    c.onclick = () => { if (st.yourTurn && !called.has(n)) P.act('call', { n }); };
+  });
+  if (setup) {
+    const waiting = st.players.map((p, i) => ({ p, i })).filter(({ p, i }) => !p.out && !st.readyAll[i]).map(({ p }) => p.name);
+    $('bn').className = 'banner'; $('bn').textContent = st.ready ? '기다리는 중: ' + waiting.join(', ') : '판을 확인하고 준비 완료를 눌러요';
+    $('b-shuffle').onclick = () => { draft = shuffled(); render(st, el, P); };
+    $('b-ready').onclick = () => P.act('ready', { board: draft });
+  } else {
+    $('bn').className = 'banner' + (st.yourTurn ? ' me' : '');
+    $('bn').innerHTML = st.yourTurn ? '내 차례 — 내 판에서 숫자를 눌러요' : '<span class="dots">' + P.esc(P.jo(P.name(st.turn), '이', '가')) + ' 고르는 중</span>';
+  }
+  $('mini').innerHTML = st.players.map((p, i) => `<div class="r"><span class="dot" style="width:10px;height:10px;border-radius:50%;background:${P.color(i)}"></span>${P.esc(p.name)}${p.me ? ' (나)' : ''}${p.out ? ' (나감)' : ''}<div class="bar"><i style="width:${Math.min(100, ((st.lines[i] || 0) / st.winLines) * 100)}%"></i></div><b>${st.lines[i] == null ? '-' : st.lines[i]}줄</b></div>`).join('');
+  el.querySelectorAll('.called span').forEach((s) => s.classList.toggle('on', called.has(+s.dataset.n)));
+  if (st.last !== lastCalled) { lastCalled = st.last; if (st.last && st.called.length > 1) P.toast(st.last + '번!'); }
+}
+Party.init({
+  game: 'bingo', title: '여럿이 빙고', emoji: '🔢', sub: '2~8명 · 차례대로 숫자를 불러 3줄 먼저', maxDefault: 4,
+  rules: { title: '🔢 여럿이 빙고 규칙', html: RULES },
+  render,
+  final: (st, P) => st.boards ? '<div class="boards">' + st.boards.map((b, i) => b ? `<div class="b"><div style="margin-bottom:3px"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${P.color(i)}"></span> ${P.esc(P.name(i))} · ${st.lines[i]}줄</div><div class="g">${b.map((n) => `<span class="${st.called.includes(n) ? 'hit' : ''}">${n}</span>`).join('')}</div></div>` : '').join('') + '</div>' : '',
+});
+</script>
+</body>
+</html>

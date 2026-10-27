@@ -14,6 +14,7 @@ const GAMES = {
   bingo: 'bingo-core.mjs', balance: 'balance-core.mjs', baseball: 'baseball-core.mjs', gomoku: 'gomoku-core.mjs',
   spice: 'spice-core.mjs', tiles: 'tiles-core.mjs', expedition: 'expedition-core.mjs', backgammon: 'backgammon-core.mjs',
   wordbingo: 'wordbingo-core.mjs',
+  'party-bingo': 'party-bingo-core.mjs', 'party-spice': 'party-spice-core.mjs', 'party-expedition': 'party-expedition-core.mjs', 'party-marble': 'party-marble-core.mjs',
 };
 const TYPES = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
@@ -48,7 +49,7 @@ async function main() {
 
   const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, 'http://x');
-    const m = url.pathname.match(/^\/api\/([a-z]+)$/);
+    const m = url.pathname.match(/^\/api\/([a-z-]+)$/);
 
     if (m) {
       const g = api[m[1]];

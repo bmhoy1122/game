@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1">
+<meta name="theme-color" content="#2a1b3d">
+<title>마블</title>
+<style>
+  :root{--accent:#7c3aed;--soft:#f1eafc;--ink:#2a1b3d;--mute:#6f5f8a;--line:#e2d9f3;--bg:radial-gradient(130% 80% at 50% 0%,#c4b5fd 0%,#6d28d9 45%,#2a1b3d 100%);--maxw:560px;
+    --pk-accent:#7c3aed;--pk-soft:#f1eafc;--pk-ink:#2a1b3d;--pk-line:#e2d9f3}
+  .board{display:grid;grid-template-columns:repeat(8,1fr);grid-template-rows:repeat(8,1fr);gap:3px;aspect-ratio:1;background:#2a1b3d;padding:3px;border-radius:14px}
+  .sq{background:#fff;border-radius:6px;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:9px;font-weight:800;line-height:1.1;text-align:center;overflow:hidden;padding:2px}
+  .sq .bar{position:absolute;left:0;right:0;top:0;height:6px}
+  .sq .nm{margin-top:4px} .sq .pr{color:#6f5f8a;font-size:8px;font-weight:700}
+  .sq .lv{font-size:9px} .sq.corner{background:#fdf6e3;font-size:11px}
+  .sq .toks{position:absolute;bottom:2px;left:2px;right:2px;display:flex;gap:1px;flex-wrap:wrap;justify-content:center}
+  .sq .tk{width:10px;height:10px;border-radius:50%;border:1.5px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.25)}
+  .sq.here{outline:3px solid #ffd166}
+  .center{grid-column:2/8;grid-row:2/8;background:#f7f3ff;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:8px;text-align:center}
+  .dice{font-size:34px;letter-spacing:4px} .center .who{font-size:13px;font-weight:800}
+  .center button{padding:10px 14px;font-size:14px}
+  .center .primary{width:auto}
+  .pl2{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px}
+  .pl2 .p{display:flex;flex-direction:column;gap:2px;padding:7px 9px;border-radius:10px;background:#f7f3ff;font-size:12px;font-weight:700;border:2px solid transparent}
+  .pl2 .p.turn{border-color:#ffd166} .pl2 .p.out{opacity:.45}
+  .pl2 .p .cash{font-size:15px;font-weight:900} .pl2 .p .props{display:flex;gap:2px;flex-wrap:wrap} .pl2 .p .props span{width:9px;height:9px;border-radius:2px}
+  @media (max-width:420px){.sq{font-size:8px}.sq .pr{display:none}.center .dice{font-size:28px}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script src="../couple-common/rules.js"></script>
+<script src="../party-common/party.js"></script>
+<script>
+const N = 28, LEVELS = ['땅', '빌라', '빌딩', '호텔'], LVE = ['', '🏠', '🏢', '🏨'];
+const GROUP_COLOR = ['#a3e635', '#38bdf8', '#a78bfa', '#fb923c', '#f472b6', '#facc15'];
+const city = (name, group, price) => ({ t: 'city', name, group, price });
+const BOARD = [
+  { t: 'start', name: '출발' },
+  city('제주', 0, 60), city('강릉', 0, 60), { t: 'key', name: '황금열쇠' }, city('춘천', 0, 80), { t: 'tax', name: '세금' }, city('전주', 1, 100),
+  { t: 'island', name: '무인도' },
+  city('광주', 1, 100), city('대전', 1, 120), { t: 'port', name: '항만', price: 150 }, city('청주', 2, 140), city('울산', 2, 140), city('대구', 2, 160),
+  { t: 'fund', name: '복지기금' },
+  city('수원', 3, 180), { t: 'key', name: '황금열쇠' }, city('인천', 3, 180), city('부산', 3, 200), { t: 'port', name: '공항', price: 150 }, city('도쿄', 4, 220),
+  { t: 'lotto', name: '복권' },
+  city('방콕', 4, 220), city('시드니', 4, 240), { t: 'key', name: '황금열쇠' }, city('파리', 5, 260), city('런던', 5, 280), city('뉴욕', 5, 320),
+];
+const ICON = { start: '🚩', island: '🏝️', fund: '🎁', lotto: '🎰', key: '🔑', tax: '💸', port: '⚓' };
+const RULES = `
+<h3>한눈에</h3><p>주사위 두 개를 굴려 판을 돌며 <b>땅을 사고 건물을 올려</b> 남이 내 땅에 오면 통행료를 받아요. 2~8명. 돈이 바닥나면 파산. 한 명만 남거나 정해진 차례가 다 돌면 <b>총자산</b>(현금+땅+건물)이 가장 많은 사람이 이겨요.</p>
+<h3>내 차례</h3><ol><li><b>주사위</b>를 굴려요. 더블(같은 눈)이면 한 번 더 (세 번 연속이면 무인도행)</li><li><b>빈 땅</b>에 멈추면 살지 말지 골라요 · <b>내 땅</b>이면 건물을 한 단계 올릴 수 있어요 (땅→빌라→빌딩→호텔) · <b>남의 땅</b>이면 통행료를 자동으로 내요</li></ol>
+<h3>칸</h3><ul><li>🚩 출발 — 지나갈 때마다 월급 200</li><li>🏝️ 무인도 — 두 차례 쉬어요 (더블이 나오면 바로 탈출)</li><li>💸 세금 — 현금의 10%를 복지기금에 · 🎁 복지기금 — 모인 돈을 받아요</li><li>🔑 황금열쇠 — 카드 한 장(돈·이동·무료 건축…) · 🎰 복권 — 10~60 당첨</li><li>⚓ 항만·공항 — 건물 없음, 둘 다 가지면 통행료 2배</li></ul>
+<h3>통행료</h3><p>땅만 = 가격의 10%, 빌라 30%, 빌딩 70%, 호텔 150%. <b>같은 색 셋</b>을 다 가지면 2배. 돈이 모자라면 비싼 자산부터 반값에 팔리고, 그래도 모자라면 파산이에요.</p>
+<div class="rl-tip">초반엔 땅을 많이, 중반엔 같은 색을 모아 건물을. 현금을 조금은 남겨둬야 통행료에 파산하지 않아요.</div>`;
+let built = false, lastLog = -1;
+const pos2cell = (i) => { // 28칸 → 8×8 테두리 (0 = 왼쪽 아래 모서리, 시계 방향)
+  if (i <= 7) return [7 - i, 0];          // 왼쪽 변 위로
+  if (i <= 14) return [0, i - 7];         // 윗변 오른쪽으로
+  if (i <= 21) return [i - 14, 7];        // 오른쪽 변 아래로
+  return [7, 28 - i];                     // 아랫변 왼쪽으로
+};
+function build(el) {
+  el.innerHTML = `<div class="banner" id="bn"></div><div class="board" id="board"></div><section class="card"><div class="pl2" id="pl"></div></section><section class="card"><h2>기록</h2><div class="log" id="log"></div></section>`;
+  const b = el.querySelector('#board');
+  const cells = {};
+  for (let i = 0; i < N; i++) {
+    const [r, c] = pos2cell(i), s = BOARD[i], d = document.createElement('div');
+    d.className = 'sq' + (s.t === 'city' || s.t === 'port' ? '' : ' corner'); d.style.gridRow = r + 1; d.style.gridColumn = c + 1; d.id = 'sq' + i;
+    d.innerHTML = (s.t === 'city' ? `<div class="bar" style="background:${GROUP_COLOR[s.group]}"></div>` : '') + `<div class="nm">${ICON[s.t] || ''}${s.name}</div>` + (s.price ? `<div class="pr">${s.price}</div>` : '') + '<div class="lv"></div><div class="toks"></div>';
+    b.appendChild(d);
+  }
+  const c = document.createElement('div'); c.className = 'center'; c.innerHTML = '<div class="dice" id="dice">🎲</div><div class="who" id="who"></div><div class="row" id="btns"><button type="button" class="primary" id="b-roll">🎲 굴리기</button><button type="button" class="primary hide" id="b-buy">사기</button><button type="button" class="primary hide" id="b-build">짓기</button><button type="button" class="hide" id="b-skip">넘어가기</button></div><div id="fund" style="font-size:11px;color:#6f5f8a;font-weight:700"></div>';
+  b.appendChild(c);
+  built = true;
+}
+const DIE = ['', '⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
+function render(st, el, P) {
+  if (!built) build(el);
+  const $ = (id) => el.querySelector('#' + id);
+  const my = st.yourTurn, me = st.you;
+  $('bn').className = 'banner' + (my ? ' me' : '');
+  $('bn').innerHTML = my ? (st.state === 'roll' ? (st.island[me] ? '무인도 — 더블이 나오면 탈출!' : '내 차례 — 주사위를 굴려요') : st.state === 'buy' ? `${BOARD[st.pending].name} 을(를) ${BOARD[st.pending].price}에 살까요?` : `${BOARD[st.pending].name}에 ${LEVELS[st.own[st.pending].lv + 1]}를 지을까요? (${st.buildCost})`) : '<span class="dots">' + P.esc(P.jo(P.name(st.turn), '이', '가')) + ' 하는 중</span>';
+  for (let i = 0; i < N; i++) {
+    const d = $('sq' + i), o = st.own[i];
+    d.querySelector('.lv').innerHTML = o ? `<span style="color:${P.color(o.p)}">●</span>${LVE[o.lv] || ''}` : '';
+    d.querySelector('.toks').innerHTML = st.pos.map((p, k) => (p === i && !st.bankrupt[k] && !st.players[k].out ? `<span class="tk" style="background:${P.color(k)}"></span>` : '')).join('');
+    d.classList.toggle('here', st.pos[me] === i && !st.bankrupt[me]);
+    d.title = BOARD[i].name + (o ? ' · ' + P.name(o.p) + ' · 통행료 ' + st.rent[i] : BOARD[i].price ? ' · ' + BOARD[i].price : '');
+  }
+  $('dice').textContent = st.dice ? DIE[st.dice[0]] + DIE[st.dice[1]] : '🎲';
+  $('who').textContent = (st.turn === null ? '' : P.name(st.turn) + ' 차례') + ' · ' + st.turnNo + '/' + st.maxTurns;
+  $('fund').textContent = '🎁 복지기금 ' + st.fund;
+  $('b-roll').classList.toggle('hide', !(my && st.state === 'roll'));
+  $('b-buy').classList.toggle('hide', !(my && st.state === 'buy')); $('b-build').classList.toggle('hide', !(my && st.state === 'build'));
+  $('b-skip').classList.toggle('hide', !(my && st.state !== 'roll'));
+  if (my && st.state === 'buy') $('b-buy').textContent = BOARD[st.pending].name + ' 사기 (' + BOARD[st.pending].price + ')';
+  if (my && st.state === 'build') $('b-build').textContent = LEVELS[st.own[st.pending].lv + 1] + ' 짓기 (' + st.buildCost + ')';
+  $('b-roll').onclick = () => P.act('roll'); $('b-buy').onclick = () => P.act('buy'); $('b-build').onclick = () => P.act('build'); $('b-skip').onclick = () => P.act('skip');
+  $('pl').innerHTML = st.players.map((p, i) => `<div class="p${st.turn === i ? ' turn' : ''}${st.bankrupt[i] || p.out ? ' out' : ''}"><div><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${P.color(i)}"></span> ${P.esc(p.name)}${p.me ? ' (나)' : ''}${st.bankrupt[i] ? ' 파산' : ''}${st.island[i] ? ' 🏝️' : ''}</div><div class="cash">💰 ${st.cash[i]}</div><div class="props">${BOARD.map((b, j) => st.own[j] && st.own[j].p === i ? `<span style="background:${b.t === 'port' ? '#94a3b8' : GROUP_COLOR[b.group]}" title="${b.name}"></span>` : '').join('')}</div></div>`).join('');
+  const last = st.log.length ? st.log[st.log.length - 1] : null;
+  $('log').innerHTML = st.log.slice().reverse().map((e) => `<b>${P.esc(P.name(e.by))}</b> ${P.esc(e.text)}`).join('<br>');
+  if (last && last.at + ':' + last.text !== lastLog) { lastLog = last.at + ':' + last.text; if (last.by !== me) P.toast(P.name(last.by) + ': ' + last.text); }
+}
+Party.init({
+  game: 'marble', title: '마블', emoji: '🎲', sub: '2~8명 · 부동산 보드게임 · 땅 사고 건물 올려 통행료 받기', maxDefault: 4,
+  rules: { title: '🎲 마블 규칙', html: RULES }, render,
+  final: (st, P) => '<div style="font-size:12px;color:#6f5f8a">총자산 = 현금 + 땅값 + 건물값</div>',
+});
+</script>
+</body>
+</html>

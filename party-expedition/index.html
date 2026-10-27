@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1">
+<meta name="theme-color" content="#1f4a3a">
+<title>여럿이 탐험대</title>
+<style>
+  :root{--accent:#1f8a5a;--soft:#e6f5ee;--ink:#1b3a2e;--mute:#5c7a6c;--line:#cfe4d8;--bg:radial-gradient(130% 80% at 50% 0%,#b7e4c7 0%,#2d8a5e 40%,#1f4a3a 100%);
+    --pk-accent:#1f8a5a;--pk-soft:#e6f5ee;--pk-ink:#1b3a2e;--pk-line:#cfe4d8}
+  .lines{display:grid;grid-template-columns:repeat(5,1fr);gap:5px}
+  .ln{border-radius:10px;padding:5px 3px;min-height:92px;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;font-weight:800;cursor:pointer;border:2px solid transparent}
+  .ln.can{border-color:#ffd166;background:#fffbe8}
+  .ln .sc{font-size:11px;color:#5c7a6c}
+  .cc{width:100%;max-width:44px;height:22px;border-radius:5px;display:grid;place-items:center;color:#fff;font-size:12px;font-weight:900;box-shadow:0 1px 0 rgba(0,0,0,.2)}
+  .c0{background:#d98c3a}.c1{background:#2f80ed}.c2{background:#27ae60}.c3{background:#c0392b}.c4{background:#7f8c8d}
+  .l0{background:#fbe9d6}.l1{background:#e0ecfb}.l2{background:#e2f5e8}.l3{background:#f8e1df}.l4{background:#eef0f1}
+  .hand{display:flex;flex-wrap:wrap;gap:5px}
+  .hc{width:46px;height:62px;border-radius:8px;display:grid;place-items:center;color:#fff;font-size:20px;font-weight:900;cursor:pointer;user-select:none;box-shadow:0 2px 0 rgba(0,0,0,.2);transition:transform .1s}
+  .hc.sel{transform:translateY(-6px);box-shadow:0 0 0 3px #fff,0 0 0 6px #1f8a5a}
+  .hc.ok{outline:3px solid #ffd166}
+  .piles{display:grid;grid-template-columns:repeat(6,1fr);gap:5px}
+  .pile{border-radius:10px;padding:6px 2px;text-align:center;font-size:11px;font-weight:800;cursor:pointer;border:2px solid transparent;background:#f3f7f5}
+  .pile.can{border-color:#1f8a5a} .pile.blocked{opacity:.4}
+  .others{display:flex;flex-direction:column;gap:6px}
+  .ot{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700} .ot .m{display:flex;gap:3px;flex:1} .ot .m span{flex:1;height:18px;border-radius:4px;display:grid;place-items:center;font-size:10px;color:#1b3a2e}
+  .ot b{min-width:36px;text-align:right}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script src="../couple-common/rules.js"></script>
+<script src="../party-common/party.js"></script>
+<script>
+const COLORS = 5, PER = 12, CN = ['사막', '바다', '숲', '화산', '설산'], CE = ['🏜️', '🌊', '🌲', '🌋', '🏔️'];
+const col = (id) => Math.floor(id / PER), val = (id) => { const k = id % PER; return k < 3 ? 0 : k - 1; }, isW = (id) => id % PER < 3;
+const lbl = (id) => (isW(id) ? '🤝' : val(id));
+const RULES = `
+<h3>한눈에</h3><p>다섯 탐험로(사막·바다·숲·화산·설산)에 <b>같은 색 카드를 오름차순</b>으로 쌓아 점수를 내요. 탐험을 시작하면 비용 20이 들어서, 적게 쌓으면 마이너스! 2~8명이 차례대로.</p>
+<h3>내 차례 = 두 걸음</h3><ol><li><b>놓기 또는 버리기</b> — 손패 한 장을 내 탐험로에 놓거나(이미 놓인 것보다 큰 숫자만. 🤝 내기 카드는 숫자 전에만) 그 색 버림 더미에 버려요</li><li><b>가져오기</b> — 덱 맨 위 또는 아무 버림 더미 맨 위 (방금 버린 더미는 안 돼요)</li></ol>
+<h3>점수</h3><p>탐험로마다 (숫자 합 − 20) × (1 + 🤝 수). 카드 8장 이상이면 +20. 시작 안 한 탐험로는 0. 덱 마지막 장을 가져가면 끝, 합이 가장 높은 사람이 이겨요.</p>
+<div class="rl-ex">예: 바다에 🤝 하나 + 5·7·9 → (21−20)×2 = 2점. 🤝 없이 3·4·5·6 → (18−20) = −2점.</div>
+<div class="rl-tip">3명 이상이면 덱을 여러 벌 겹쳐요. 같은 숫자가 두 장 나올 수 있는데 한 탐험로엔 한 번만 놓을 수 있어요.</div>`;
+let built = false, sel = null, lastTurn = -1;
+function build(el) {
+  el.innerHTML = `
+    <div class="banner" id="bn"></div>
+    <section class="card"><h2 id="lh">내 탐험로</h2><div class="lines" id="lines"></div></section>
+    <section class="card"><h2 id="hh">내 손패</h2><div class="hand" id="hand"></div>
+      <div class="row" id="playrow" style="margin-top:8px"><button type="button" class="primary" id="b-line">탐험로에 놓기</button><button type="button" id="b-discard">버리기</button></div></section>
+    <section class="card"><h2 id="ph">버림 더미 · 덱</h2><div class="piles" id="piles"></div></section>
+    <section class="card"><h2>다른 사람들</h2><div class="others" id="others"></div></section>
+    <section class="card"><h2>기록</h2><div class="log" id="log"></div></section>`;
+  built = true;
+}
+function render(st, el, P) {
+  if (!built) build(el);
+  const $ = (id) => el.querySelector('#' + id);
+  if (st.turnNo !== lastTurn) { lastTurn = st.turnNo; sel = null; }
+  const my = st.yourTurn, me = st.you, mine = st.lines[me];
+  const canLine = new Set(st.canLine);
+  $('bn').className = 'banner' + (my ? ' me' : '');
+  $('bn').innerHTML = !my ? '<span class="dots">' + P.esc(P.jo(P.name(st.turn), '이', '가')) + ' 하는 중</span>' : st.step === 'play' ? '내 차례 ① 손패 한 장을 놓거나 버려요' : '내 차례 ② 덱이나 버림 더미에서 한 장 가져와요';
+  $('lh').textContent = '내 탐험로 · ' + st.scores[me] + '점';
+  $('lines').innerHTML = mine.map((line, c) => `<div class="ln l${c}${my && st.step === 'play' && sel !== null && col(sel) === c && canLine.has(sel) ? ' can' : ''}" data-c="${c}">${CE[c]}<span class="sc">${st.lineScores[me][c]}점</span>${line.map((id) => `<div class="cc c${c}">${lbl(id)}</div>`).join('')}</div>`).join('');
+  el.querySelectorAll('.ln').forEach((d) => { d.onclick = () => { if (my && st.step === 'play' && sel !== null && col(sel) === +d.dataset.c) P.act('play', { card: sel, to: 'line' }); }; });
+  $('hh').textContent = '내 손패 ' + st.hand.length + '장';
+  $('hand').innerHTML = st.hand.map((id) => `<div class="hc c${col(id)}${sel === id ? ' sel' : ''}${canLine.has(id) ? ' ok' : ''}" data-id="${id}">${lbl(id)}</div>`).join('');
+  el.querySelectorAll('.hc').forEach((d) => { d.onclick = () => { sel = sel === +d.dataset.id ? null : +d.dataset.id; render(st, el, P); }; });
+  $('playrow').classList.toggle('hide', !(my && st.step === 'play'));
+  $('b-line').disabled = sel === null || !canLine.has(sel); $('b-discard').disabled = sel === null;
+  $('b-line').onclick = () => P.act('play', { card: sel, to: 'line' });
+  $('b-discard').onclick = () => P.act('play', { card: sel, to: 'discard' });
+  const drawing = my && st.step === 'draw';
+  $('ph').textContent = '버림 더미 · 덱 ' + st.deck + '장' + (st.decks > 1 ? ' (' + st.decks + '벌)' : '') + (drawing ? ' — 가져올 곳을 눌러요' : '');
+  $('piles').innerHTML = st.piles.map((top, c) => `<div class="pile l${c}${drawing && top !== null && st.blocked !== c ? ' can' : ''}${st.blocked === c ? ' blocked' : ''}" data-c="${c}">${CE[c]}<br>${top === null ? '－' : `<div class="cc c${c}" style="margin:2px auto">${lbl(top)}</div>`}<small>${st.pileCount[c]}장</small></div>`).join('')
+    + `<div class="pile${drawing ? ' can' : ''}" data-c="deck" style="background:#1b3a2e;color:#fff">🂠<br>덱<br><small>${st.deck}장</small></div>`;
+  el.querySelectorAll('.pile').forEach((d) => { d.onclick = () => { if (!drawing) return; const c = d.dataset.c; if (c === 'deck') P.act('draw', { from: 'deck' }); else if (st.piles[+c] !== null && st.blocked !== +c) P.act('draw', { from: +c }); }; });
+  $('others').innerHTML = st.players.map((p, i) => i === me ? '' : `<div class="ot"><span style="width:8px;height:8px;border-radius:50%;background:${P.color(i)}"></span>${P.esc(p.name)}${p.out ? '(나감)' : ''} <small>${st.handCounts[i]}장</small><div class="m">${st.lines[i].map((l, c) => `<span class="l${c}" title="${CN[c]}">${l.length ? lbl(l[l.length - 1]) + '·' + l.length : ''}</span>`).join('')}</div><b>${st.scores[i] == null ? '-' : st.scores[i] + '점'}</b></div>`).join('');
+  $('log').innerHTML = st.log.slice().reverse().map((e) => `<b>${P.esc(P.name(e.by))}</b> ${e.t === 'line' ? CN[col(e.card)] + '에 ' + lbl(e.card) + ' 놓음' : e.t === 'discard' ? CN[col(e.card)] + ' ' + lbl(e.card) + ' 버림' : e.from === 'deck' ? '덱에서 가져감' : CN[e.from] + ' 더미에서 ' + lbl(e.card) + ' 가져감'}`).join('<br>');
+}
+Party.init({
+  game: 'expedition', title: '여럿이 탐험대', emoji: '🧭', sub: '2~8명 · 로스트 시티 방식 · 탐험로에 오름차순으로 쌓기', maxDefault: 4,
+  rules: { title: '🧭 탐험대 규칙', html: RULES }, render,
+  final: (st, P) => '<table class="seats" style="width:100%;font-size:12px"><tr><th>이름</th>' + CN.map((n) => `<th>${n}</th>`).join('') + '<th>합</th></tr>' + st.players.map((p, i) => st.scores[i] == null ? '' : `<tr><td>${P.esc(p.name)}</td>${st.lineScores[i].map((s) => `<td>${s}</td>`).join('')}<td><b>${st.scores[i]}</b></td></tr>`).join('') + '</table>',
+});
+</script>
+</body>
+</html>

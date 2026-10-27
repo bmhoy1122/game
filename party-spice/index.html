@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1">
+<meta name="theme-color" content="#5a1238">
+<title>여럿이 향신료 시장</title>
+<style>
+  :root{--accent:#c2255c;--soft:#fdeff4;--ink:#4a2236;--mute:#a5587c;--line:#f1cadb;--bg:radial-gradient(130% 80% at 50% 0%,#ffe3b0 0%,#f4a259 30%,#c2255c 66%,#4a0f30 100%);
+    --pk-accent:#c2255c;--pk-soft:#fdeff4;--pk-ink:#6b1840;--pk-line:#f1cadb}
+  .cards{display:flex;gap:6px;flex-wrap:wrap;min-height:64px}
+  .cd{width:52px;height:68px;border-radius:9px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:900;color:#fff;cursor:pointer;user-select:none;
+    box-shadow:0 2px 0 rgba(0,0,0,.18),inset 0 0 0 2px rgba(255,255,255,.35);transition:transform .12s;font-size:22px}
+  .cd .n{font-size:10px;margin-top:2px;text-shadow:0 1px 2px rgba(0,0,0,.3)}
+  .t-d{background:linear-gradient(160deg,#ff6b81,#d6304a)} .t-g{background:linear-gradient(160deg,#ffd54a,#e0a000);color:#5a3a00} .t-s{background:linear-gradient(160deg,#dfe6ee,#9aa8b8);color:#2f3a48}
+  .t-c{background:linear-gradient(160deg,#b57ce8,#7a3fbf)} .t-p{background:linear-gradient(160deg,#5fc96f,#2a8c3c)} .t-l{background:linear-gradient(160deg,#c48a5a,#8a5430)} .t-k{background:linear-gradient(160deg,#f2dcb0,#d4b07a);color:#6a4a20}
+  .t-g .n,.t-s .n,.t-k .n{text-shadow:none}
+  .cd.sel{transform:translateY(-6px);box-shadow:0 0 0 3px #fff,0 0 0 6px #c2255c,0 8px 14px rgba(0,0,0,.25)}
+  .cd.dim{opacity:.45}
+  .acts{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+  .acts button{padding:10px 2px 8px;font-size:12px;line-height:1.15;background:#efe4ea;color:#a8899a}
+  .acts button i{display:block;font-style:normal;font-size:20px;margin-bottom:2px}
+  .acts button.on{background:linear-gradient(135deg,#e8507f,#c2255c);color:#fff}
+  .tok{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;font-size:11px;text-align:center}
+  .tok .t{background:#fff4f8;border-radius:8px;padding:5px 2px;font-weight:800} .tok .t b{display:block;font-size:15px}
+  .tok .t small{display:block;color:#a5587c;font-weight:700}
+  table.seats{width:100%;border-collapse:collapse;font-size:12px} .seats th,.seats td{padding:4px 3px;text-align:center;border-bottom:1px solid #f5e0ea} .seats th{color:#a5587c;font-weight:700}
+  .seats tr.turn td{background:#fff8e0} .seats tr.me td:first-child{font-weight:900}
+  .sellrow{display:flex;gap:6px;align-items:center;margin-top:8px} .sellrow select{flex:1}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script src="../couple-common/rules.js"></script>
+<script src="../party-common/party.js"></script>
+<script>
+const GOODS = ['d', 'g', 's', 'c', 'p', 'l'], PRECIOUS = ['d', 'g', 's'], CAMEL = 'k';
+const EMO = { d: '💎', g: '🥇', s: '🥈', c: '🧣', p: '🌶️', l: '👜', k: '🐪' };
+const NAME = { d: '다이아', g: '금', s: '은', c: '비단', p: '향신료', l: '가죽', k: '낙타' };
+const RULES = `
+<h3>한눈에</h3><p>시장(5장)에서 상품 카드를 모아 <b>비쌀 때 팔아</b> 토큰(점수)을 많이 모으는 게임이에요. 2~8명이 차례대로 한 행동씩. 3명 이상이면 카드 덱과 토큰을 여러 벌 겹쳐서 써요.</p>
+<h3>내 차례엔 하나만</h3><ul><li><b>가져오기</b> — 시장 상품 1장 (손은 7장까지)</li><li><b>낙타 전부</b> — 시장의 낙타를 모두 내 무리로 (낙타는 교환할 때 돈처럼 써요)</li><li><b>교환</b> — 시장 상품 2장 이상 ↔ 같은 수의 내 카드/낙타 (같은 종류는 안 돼요)</li><li><b>팔기</b> — 손의 한 종류를 원하는 만큼. 다이아·금·은은 2장 이상. 판 장수만큼 토큰을 <b>비싼 것부터</b> 받고, 3·4·5장 이상 팔면 보너스 토큰</li></ul>
+<h3>끝·점수</h3><p>상품 토큰 더미 셋이 비거나 덱이 떨어지면 끝. 토큰 + 보너스 + 낙타가 <b>혼자</b> 가장 많으면 5점. 가장 높은 사람이 이겨요.</p>
+<div class="rl-tip">토큰은 먼저 파는 사람이 비싼 걸 가져가요. 너무 모으기만 하면 남이 다 팔아버려요.</div>`;
+let built = false, selM = new Set(), selH = new Set(), selC = 0, mode = null, lastMoves = -1;
+
+function build(el) {
+  el.innerHTML = `
+    <div class="banner" id="bn"></div>
+    <section class="card"><h2>시장 <small id="deck"></small></h2><div class="cards" id="market"></div></section>
+    <section class="card"><h2 id="handh">내 손패</h2><div class="cards" id="hand"></div>
+      <div class="row" style="margin-top:8px;font-size:13px;font-weight:700"><span id="herd"></span><span id="camelsel" class="hide">교환에 쓸 낙타: <button type="button" id="cminus" style="padding:4px 10px">－</button> <b id="cn">0</b> <button type="button" id="cplus" style="padding:4px 10px">＋</button></span></div>
+      <div class="acts" style="margin-top:8px"><button type="button" id="a-take"><i>👉</i>가져오기</button><button type="button" id="a-camels"><i>🐪</i>낙타 전부</button><button type="button" id="a-trade"><i>🔁</i>교환</button><button type="button" id="a-sell"><i>💰</i>팔기</button></div>
+      <div class="sellrow hide" id="sellrow"><select id="selltype"></select><select id="selln"></select><button type="button" class="primary" id="b-sell" style="width:auto">팔기</button></div>
+      <div class="row hide" id="traderow" style="margin-top:8px"><button type="button" class="primary" id="b-trade">선택한 카드로 교환</button></div>
+    </section>
+    <section class="card"><h2>상품 토큰 (남은 것, 비싼 순)</h2><div class="tok" id="tok"></div></section>
+    <section class="card"><h2>참가자</h2><table class="seats"><thead><tr><th>이름</th><th>손</th><th>🐪</th><th>토큰</th><th>보너스</th><th>점수</th></tr></thead><tbody id="seats"></tbody></table></section>
+    <section class="card"><h2>기록</h2><div class="log" id="log"></div></section>`;
+  built = true;
+}
+const card = (t, extra) => `<div class="cd t-${t}${extra || ''}">${EMO[t]}<span class="n">${NAME[t]}</span></div>`;
+function logText(e, P) {
+  const who = P.name(e.by);
+  if (e.kind === 'take') return `<b>${P.esc(who)}</b> ${NAME[e.type]} 가져감`;
+  if (e.kind === 'camels') return `<b>${P.esc(who)}</b> 낙타 ${e.n}마리`;
+  if (e.kind === 'trade') return `<b>${P.esc(who)}</b> 교환 ${e.got.map((t) => EMO[t]).join('')} ↔ ${e.gave.map((t) => EMO[t]).join('')}`;
+  if (e.kind === 'sell') return `<b>${P.esc(who)}</b> ${NAME[e.type]} ${e.n}장 팔아 ${e.gain}점${e.bonus ? ' + 보너스' : ''}`;
+  return '';
+}
+function render(st, el, P) {
+  if (!built) build(el);
+  const $ = (id) => el.querySelector('#' + id);
+  if (st.moves !== lastMoves) { lastMoves = st.moves; selM.clear(); selH.clear(); selC = 0; mode = null; }
+  const my = st.yourTurn;
+  $('bn').className = 'banner' + (my ? ' me' : '');
+  $('bn').innerHTML = my ? '내 차례 — 가져오기 · 낙타 · 교환 · 팔기 중 하나' : '<span class="dots">' + P.esc(P.jo(P.name(st.turn), '이', '가')) + ' 생각 중</span>';
+  $('deck').textContent = '· 덱 ' + st.deck + '장' + (st.decks > 1 ? ' (' + st.decks + '벌)' : '') + ' · 빈 토큰 더미 ' + st.emptyPiles + '/3';
+  $('market').innerHTML = st.market.map((t, i) => card(t, (selM.has(i) ? ' sel' : '') + (mode === 'trade' && t === CAMEL ? ' dim' : ''))).join('');
+  $('hand').innerHTML = st.hand.map((t, i) => card(t, selH.has(i) ? ' sel' : '')).join('');
+  $('handh').textContent = '내 손패 ' + st.hand.length + '/7';
+  $('herd').textContent = '🐪 내 낙타 ' + st.herd + '마리';
+  el.querySelectorAll('#market .cd').forEach((c, i) => { c.onclick = () => { if (!my) return; if (mode === 'trade') { if (st.market[i] === CAMEL) return; selM.has(i) ? selM.delete(i) : selM.add(i); } else { selM = new Set([i]); mode = 'take'; } paint(); }; });
+  el.querySelectorAll('#hand .cd').forEach((c, i) => { c.onclick = () => { if (!my) return; if (mode !== 'trade') { mode = 'sell'; $('selltype').value = st.hand[i]; } else { selH.has(i) ? selH.delete(i) : selH.add(i); } paint(); }; });
+  function paint() {
+    el.querySelectorAll('#market .cd').forEach((c, i) => c.classList.toggle('sel', selM.has(i)));
+    el.querySelectorAll('#hand .cd').forEach((c, i) => c.classList.toggle('sel', selH.has(i)));
+    ['take', 'camels', 'trade', 'sell'].forEach((m) => $('a-' + m).classList.toggle('on', mode === m));
+    $('sellrow').classList.toggle('hide', mode !== 'sell'); $('traderow').classList.toggle('hide', mode !== 'trade'); $('camelsel').classList.toggle('hide', mode !== 'trade');
+    $('cn').textContent = selC;
+    const cnt = {}; for (const t of st.hand) cnt[t] = (cnt[t] || 0) + 1;
+    const tt = $('selltype'); const prev = tt.value;
+    tt.innerHTML = GOODS.filter((t) => cnt[t]).map((t) => `<option value="${t}">${EMO[t]} ${NAME[t]} ${cnt[t]}장</option>`).join('') || '<option value="">팔 상품 없음</option>';
+    if ([...tt.options].some((o) => o.value === prev)) tt.value = prev;
+    const t = tt.value, n = cnt[t] || 0, min = PRECIOUS.includes(t) ? 2 : 1;
+    $('selln').innerHTML = [...Array(Math.max(0, n - min + 1))].map((_, k) => `<option value="${n - k}">${n - k}장</option>`).join('') || '<option value="">-</option>';
+    if (mode === 'take' && selM.size === 1) { const i = [...selM][0]; if (st.market[i] !== CAMEL) { P.act('take', { card: i }); mode = null; } }
+  }
+  $('a-take').onclick = () => { mode = 'take'; selM.clear(); selH.clear(); paint(); P.toast('시장에서 가져올 상품 1장을 눌러요'); };
+  $('a-camels').onclick = () => { if (!my) return; P.act('camels'); };
+  $('a-trade').onclick = () => { mode = 'trade'; selM.clear(); selH.clear(); selC = 0; paint(); P.toast('시장 2장 이상 + 같은 수의 내 카드/낙타를 고르고 교환'); };
+  $('a-sell').onclick = () => { mode = 'sell'; selM.clear(); selH.clear(); paint(); };
+  $('cminus').onclick = () => { selC = Math.max(0, selC - 1); paint(); }; $('cplus').onclick = () => { selC = Math.min(st.herd, selC + 1); paint(); };
+  $('b-trade').onclick = () => { if (!my) return; P.act('trade', { take: [...selM], give: [...selH], camels: selC }); };
+  $('b-sell').onclick = () => { if (!my) return; P.act('sell', { type: $('selltype').value, n: +$('selln').value }); };
+  $('selltype').onchange = paint;
+  paint();
+  $('tok').innerHTML = GOODS.map((t) => `<div class="t">${EMO[t]}<b>${st.tokens[t].length ? st.tokens[t].slice(0, 3).join('·') + (st.tokens[t].length > 3 ? '…' : '') : '－'}</b><small>${st.tokens[t].length}개</small></div>`).join('');
+  $('seats').innerHTML = st.players.map((p, i) => `<tr class="${st.turn === i ? 'turn' : ''}${p.me ? ' me' : ''}"><td><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${P.color(i)}"></span> ${P.esc(p.name)}${p.out ? ' (나감)' : ''}</td><td>${st.seats[i].hand}</td><td>${st.seats[i].herd}</td><td>${st.seats[i].goodsSum}</td><td>${st.seats[i].bonus}개</td><td><b>${st.seats[i].goodsSum}+?</b></td></tr>`).join('');
+  $('log').innerHTML = st.log.slice().reverse().map((e) => logText(e, P)).join('<br>');
+}
+Party.init({
+  game: 'spice', title: '여럿이 향신료 시장', emoji: '🧂', sub: '2~8명 · 자이푸르 방식 · 모아서 비쌀 때 팔기', maxDefault: 4,
+  rules: { title: '🧂 향신료 시장 규칙', html: RULES }, render,
+  final: (st, P) => st.final ? '<table class="seats"><tr><th>이름</th><th>토큰</th><th>보너스</th><th>낙타</th><th>합</th></tr>' + st.final.map((f, i) => f ? `<tr><td>${P.esc(P.name(i))}</td><td>${f.goods}</td><td>${f.bonus} (${f.bonusVals.join('·') || '-'})</td><td>${f.camel ? '+5' : '-'}</td><td><b>${f.total}</b></td></tr>` : '').join('') + '</table>' : '',
+});
+</script>
+</body>
+</html>
