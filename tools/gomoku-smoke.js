@@ -68,10 +68,11 @@ function memStore() {
     // 방 흐름 — 랜덤으로 선 정하기를 건너뛴다
     const store = memStore();
     const call = (b) => G.handle(b, store);
-    const a = (await call({ action: 'create', name: '민호', pick: 'coin' })).body;
-    const b = (await call({ action: 'join', code: a.code, name: '지유' })).body;
+    const a = (await call({ action: 'create', name: '민호', pick: 'coin', uid: 'u-minho' })).body;
+    const b = (await call({ action: 'join', code: a.code, name: '지유', uid: 'bad uid; drop' })).body;
     const code = a.code, tk = [a.token, b.token];
     check('들어오면 바로 둔다 (랜덤 선)', b.phase === 'play' && b.size === 15);
+    check('전적용 uid: 자리별로 응답에 돌려준다 (이상한 값은 null), created 포함', JSON.stringify(b.uids) === '["u-minho",null]' && typeof b.created === 'number');
     const first = b.first, second = 1 - first;
     const sA = (await call({ action: 'state', code, token: tk[first] })).body;
     check('선공이 흑, 후공이 백', sA.myColor === 'black' && b.myColor === (first === 1 ? 'black' : 'white'));

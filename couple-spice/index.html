@@ -235,6 +235,7 @@
 </div>
 <script src="../couple-common/picker.js"></script>
 <script src="../couple-common/rules.js"></script>
+<script src="../couple-common/report.js"></script>
 <script>
 /* =========================================================================
    향신료 시장 — 자이푸르 방식, 한 라운드짜리.
@@ -279,6 +280,7 @@ function adopt(data) {
   if (typeof data.you === 'number') S.you = data.you;
   st = data;
   tellOpener();
+  Report.couple(SAVE.replace('couple-', ''), S, st);   // 판이 끝났으면 탕비실에 전적 보고 (한 번)
   save();
   render();
 }
@@ -694,7 +696,7 @@ $('b-resign').onclick = () => {
 };
 const createRoom = (bot) => act(async () => {
   S.name = $('name').value.trim();
-  adopt(await api('create', { name: S.name, pick: chooser.get(), bot: !!bot }));
+  adopt(await api('create', { name: S.name, uid: Report.uid, pick: chooser.get(), bot: !!bot }));
   poll();
 });
 $('b-create').onclick = () => createRoom(false);
@@ -704,7 +706,7 @@ $('b-join').onclick = () => act(async () => {
   if (!/^\d{4}$/.test(c)) throw new Error('네 자리 숫자를 넣어주세요');
   S.name = $('name').value.trim();
   S.code = c;
-  adopt(await api('join', { code: c, name: S.name }));
+  adopt(await api('join', { code: c, name: S.name, uid: Report.uid }));
   poll();
 });
 $('b-again').onclick = () => act(async () => { clearSel(); prevMarket = null; lastMoves = -1; adopt(await api('restart', { round: st.round })); });

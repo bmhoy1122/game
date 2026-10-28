@@ -246,6 +246,7 @@
 </div>
 <script src="../couple-common/picker.js"></script>
 <script src="../couple-common/rules.js"></script>
+<script src="../couple-common/report.js"></script>
 <script>
 /* =========================================================================
    비밀 타일 (다빈치 코드 방식) — 상대 줄의 숨은 숫자를 먼저 다 맞히면 이긴다.
@@ -287,6 +288,7 @@ function adopt(data) {
   if (typeof data.you === 'number') S.you = data.you;
   st = data;
   tellOpener();                                   // st 가 갱신된 뒤 (bot 여부를 같이 보낸다)
+  Report.couple(SAVE.replace('couple-', ''), S, st);   // 판이 끝났으면 탕비실에 전적 보고 (한 번)
   save();
   render();
 }
@@ -714,7 +716,7 @@ $('b-resign').onclick = () => {
 };
 const createRoom = (bot) => act(async () => {
   S.name = $('name').value.trim();
-  adopt(await api('create', { name: S.name, pick: chooser.get(), bot: !!bot }));
+  adopt(await api('create', { name: S.name, uid: Report.uid, pick: chooser.get(), bot: !!bot }));
   poll();
 });
 $('b-create').onclick = () => createRoom(false);
@@ -724,7 +726,7 @@ $('b-join').onclick = () => act(async () => {
   if (!/^\d{4}$/.test(c)) throw new Error('네 자리 숫자를 넣어주세요');
   S.name = $('name').value.trim();
   S.code = c;
-  adopt(await api('join', { code: c, name: S.name }));
+  adopt(await api('join', { code: c, name: S.name, uid: Report.uid }));
   poll();
 });
 $('b-again').onclick = () => act(async () => { stepKey = null; logKey = null; adopt(await api('restart', { round: st.round })); });

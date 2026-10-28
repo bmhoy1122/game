@@ -35,9 +35,10 @@ const lib = (f) => import(path.join(__dirname, '..', 'netlify/lib', f));
   try {
     /* ---------- kit: 방 만들기·들어오기·시작·AI ---------- */
     {
-      const t = table(Bi.handle, 3, 0, 3);
+      const t = table(Bi.handle, 3, 0, 3, { uid: 'u-host' });
       let r = await t.open();
       check('kit: 방장이 만들고 둘이 들어와 3명', r.status === 200 && (await t.poll()).body.players.length === 3);
+      { const v = (await t.poll()).body; check('kit: 전적용 uid 는 자리별 players[].uid 로, 없으면 null · created 포함', v.players[0].uid === 'u-host' && v.players[1].uid === null && typeof v.created === 'number'); }
       const full = await Bi.handle({ action: 'join', name: '넷째', code: (await t.poll()).body.code }, t.store, t.now());
       check('kit: 자리가 차면 못 들어온다', full.status === 409, full.body.error);
       const notHost = await t.as(1, { action: 'start' });

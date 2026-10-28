@@ -381,6 +381,7 @@ GRAV = 0.6          GRAB_HOLD = 20     (Z 꾹 → 안기, 약 0.33초)
 | `tools/couple-dev.js` | 같은 core 에 메모리 저장소를 끼운 로컬 서버. 게임마다 저장소 따로 |
 | `couple-common/picker.js` | 선 정하기 화면 + `jo()`. 이심전심 빼고 다 `<script src>` 로 같이 쓴다 |
 | `couple-common/rules.js` | 규칙 설명 창. 보드게임 넷과 단어 빙고가 쓴다 |
+| `couple-common/report.js` | 탕비실 전적 보고 — `?uid=` 기억 + 판이 끝나면 opener 에 `couple-result` 한 번. 커플 아홉·여럿이 일곱 전부 포함 |
 | `tools/*-smoke.js` | 같은 core 를 그대로 불러 규칙만 돌린다 |
 
 규칙 파일에 `@netlify/blobs` import 가 없어서 **`npm install` 없이** 테스트와 로컬 플레이가 된다.
@@ -494,6 +495,14 @@ GRAV = 0.6          GRAB_HOLD = 20     (Z 꾹 → 안기, 약 0.33초)
   game, code, you, name}, '*')` 를 코드당 한 번 보낸다. 탕비실은 origin 을 확인하고 `you === 0`(방 만든 사람)일 때만
   방 사람들에게 "참가하기" 초대를 띄운다. 네 자리 코드뿐이라 대상 origin 은 `'*'`. 함수 API 에 CORS 가 없어서
   방 생성은 항상 이 페이지에서 한다 — 탕비실은 코드만 중계한다.
+- **전적** (2026-10, 탕비실 요청 "게임별 상대 대비 전적·절대 전적·순위"): 탕비실이 `?uid=<메신저 계정 id>` 를 붙여 연다.
+  `couple-common/report.js`(모든 게임 페이지가 `<script src>`) 가 uid 를 기억해(sessionStorage) 방 만들기·들어가기 body 에
+  `uid` 로 보내고, `room-kit`/`party-kit` 이 `cleanUid`(`[\w-]{1,48}`) 로 걸러 자리마다 적어 둔 뒤 응답에 돌려준다
+  (room-kit `uids[]`, party-kit `players[].uid`, 둘 다 `created` = 방 만든 시각). 판이 끝나면(`phase`/`stage === 'done'`)
+  `adopt` 에서 `Report.couple(game, S, st)` / `Report.party(...)` 가 `window.opener.postMessage({type:'couple-result', game, code,
+  round, created, you, players[{name,uid,bot,out,team}], winners[], draw, rank, teams, teamWinners}, '*')` 를 **방·판·created 당
+  한 번** 보낸다. 커플 게임은 `st.winner`(자리 또는 'draw')로 — 이심전심은 winner 가 없어 안 보낸다. 저장·집계는 전부 탕비실
+  (Supabase `lounge_game_results`) 몫이고 게임 서버는 아무것도 남기지 않는다. opener 가 없으면(직접 연 탭) 조용히 안 보낸다.
 
 ### 겪은 함정
 

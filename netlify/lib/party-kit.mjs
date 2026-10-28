@@ -32,6 +32,7 @@ export const BOT_DELAY = 900;
 export const MIN_SEATS = 2, MAX_SEATS = 8;
 const code4 = () => String(Math.floor(1000 + Math.random() * 9000));
 const cleanName = (n) => String(n || '').trim().slice(0, 8);
+const cleanUid = (u) => (typeof u === 'string' && /^[\w-]{1,48}$/.test(u) ? u : null);   // 탕비실 계정 id (전적용, 비밀 아님)
 const roomKey = (c) => `room:${c}`;
 const playerKey = (c, i) => `room:${c}:p${i}`;
 const alive = (room, now) => room && now - room.created < ROOM_TTL;
@@ -117,9 +118,9 @@ export async function handleParty(game, body, store, now = Date.now()) {
   function view(ctx) {
     const { room, idx } = ctx;
     const base = {
-      code: room.code, round: room.round, you: idx, host: room.host, phase: room.phase, max: room.max,
+      code: room.code, round: room.round, created: room.created, you: idx, host: room.host, phase: room.phase, max: room.max,
       bot: room.players.some((p) => p.bot),
-      players: room.players.map((p, i) => ({ name: p.name, bot: !!p.bot, out: !!(room.out && room.out[i]), me: i === idx, team: room.teams ? p.team : null })),
+      players: room.players.map((p, i) => ({ name: p.name, bot: !!p.bot, out: !!(room.out && room.out[i]), me: i === idx, team: room.teams ? p.team : null, uid: p.uid || null })),
       first: room.phase === 'play' ? room.first : null,
       teams: room.teams || 0, teamOptions: teamOptions(game),
     };
@@ -163,7 +164,7 @@ export async function handleParty(game, body, store, now = Date.now()) {
     let max = Number(body.max); if (!Number.isInteger(max)) max = 4;
     max = Math.max(MIN_SEATS, Math.min(MAX_SEATS, max));
     const token = crypto.randomUUID();
-    const room = { code, created: now, round: 1, max, phase: 'lobby', host: 0, players: [{ token, name: cleanName(body.name) }], out: [], lastAt: now };
+    const room = { code, created: now, round: 1, max, phase: 'lobby', host: 0, players: [{ token, name: cleanName(body.name), uid: cleanUid(body.uid) }], out: [], lastAt: now };
     room.opts = game.options ? game.options(body || {}) : {};
     const tn = Number(body.teams), opts = teamOptions(game);
     room.teams = opts.includes(tn) ? tn : opts.includes(0) ? 0 : opts[0];
@@ -190,7 +191,7 @@ export async function handleParty(game, body, store, now = Date.now()) {
     if (room.phase !== 'lobby') return bad('이미 시작한 방이에요', 409);
     if (room.players.length >= room.max) return bad(`자리가 다 찼어요 (${room.max}명)`, 409);
     const token = crypto.randomUUID();
-    room.players.push({ token, name: cleanName(body.name) });
+    room.players.push({ token, name: cleanName(body.name), uid: cleanUid(body.uid) });
     if (room.teams) room.players[room.players.length - 1].team = smallestTeam(room);
     await store.set(roomKey(code), room);
     return ok(await load(room, room.players.length - 1), { token });

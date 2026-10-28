@@ -232,6 +232,7 @@
 </div>
 <script src="../couple-common/picker.js"></script>
 <script src="../couple-common/rules.js"></script>
+<script src="../couple-common/report.js"></script>
 <script>
 /* =========================================================================
    탐험대 — 로스트 시티 방식, 한 라운드.
@@ -292,6 +293,7 @@ function adopt(data) {
   if (typeof data.you === 'number') S.you = data.you;
   st = data;
   tellOpener();
+  Report.couple(SAVE.replace('couple-', ''), S, st);   // 판이 끝났으면 탕비실에 전적 보고 (한 번)
   save();
   render();
 }
@@ -634,7 +636,7 @@ Rules.mount({ title: '🧭 탐험대 규칙', html: RULES_HTML, buttons: [$('b-r
 /* ------------------------------------------------------------------ 버튼 */
 const createRoom = (bot) => act(async () => {
   S.name = $('name').value.trim();
-  adopt(await api('create', { name: S.name, pick: chooser.get(), bot: !!bot }));
+  adopt(await api('create', { name: S.name, uid: Report.uid, pick: chooser.get(), bot: !!bot }));
   poll();
 });
 $('b-create').onclick = () => createRoom(false);
@@ -644,7 +646,7 @@ $('b-join').onclick = () => act(async () => {
   if (!/^\d{4}$/.test(c)) throw new Error('네 자리 숫자를 넣어주세요');
   S.name = $('name').value.trim();
   S.code = c;
-  adopt(await api('join', { code: c, name: S.name }));
+  adopt(await api('join', { code: c, name: S.name, uid: Report.uid }));
   poll();
 });
 $('b-again').onclick = () => act(async () => { sel = null; adopt(await api('restart', { round: st.round })); });
