@@ -222,6 +222,7 @@
 </div>
 <script src="../couple-common/picker.js"></script>
 <script src="../couple-common/rules.js"></script>
+<script src="../couple-common/report.js"></script>
 <script>
 /* =========================================================================
    단어 빙고 — 주제를 정하고 각자 판에 단어를 직접 써서 번갈아 부른다.
@@ -264,6 +265,7 @@ function adopt(data) {
   if (typeof data.you === 'number') S.you = data.you;
   st = data;
   tellOpener();                                   // st 가 갱신된 뒤 (bot 여부를 같이 보낸다)
+  Report.couple(SAVE.replace('couple-', ''), S, st);   // 판이 끝났으면 탕비실에 전적 보고 (한 번)
   save();
   render();
 }
@@ -630,7 +632,7 @@ function drawLog() {
 const createRoom = (bot) => act(async () => {
   S.name = $('name').value.trim();
   if (opt.topic === 'custom' && !opt.topicText.trim()) { $('topic-text').focus(); throw new Error('주제를 써주세요'); }
-  adopt(await api('create', { name: S.name, pick: chooser.get(), bot: !!bot,
+  adopt(await api('create', { name: S.name, uid: Report.uid, pick: chooser.get(), bot: !!bot,
     topic: opt.topic, topicText: opt.topicText, size: opt.size, lines: opt.lines }));
   poll();
 });
@@ -641,7 +643,7 @@ $('b-join').onclick = () => act(async () => {
   if (!/^\d{4}$/.test(c)) throw new Error('네 자리 숫자를 넣어주세요');
   S.name = $('name').value.trim();
   S.code = c;
-  adopt(await api('join', { code: c, name: S.name }));
+  adopt(await api('join', { code: c, name: S.name, uid: Report.uid }));
   poll();
 });
 $('b-again').onclick = () => act(async () => adopt(await api('restart', { round: st.round })));

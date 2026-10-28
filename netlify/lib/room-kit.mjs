@@ -55,6 +55,7 @@ const playerKey = (c, i) => `room:${c}:p${i}`;
 const alive = (room, now) => room && now - room.created < ROOM_TTL;
 const code4 = () => String(Math.floor(1000 + Math.random() * 9000));
 const cleanName = (n) => String(n || '').trim().slice(0, 8);
+const cleanUid = (u) => (typeof u === 'string' && /^[\w-]{1,48}$/.test(u) ? u : null);   // 탕비실 계정 id (전적용, 비밀 아님)
 
 export async function handleRoom(game, body, store, now = Date.now()) {
   const act = body && body.action;
@@ -77,8 +78,9 @@ export async function handleRoom(game, body, store, now = Date.now()) {
     const o = ctx.room.players[1 - ctx.idx];
     const me = ctx.room.players[ctx.idx];
     return {
-      code: ctx.room.code, round: ctx.room.round, you: ctx.idx, bot: isBotRoom(ctx.room),
+      code: ctx.room.code, round: ctx.room.round, created: ctx.room.created, you: ctx.idx, bot: isBotRoom(ctx.room),
       name: me ? me.name : '',
+      uids: ctx.room.players.map((p) => (p && p.uid) || null),     // 전적(탕비실)용 — 메신저 계정 id
       opponent: o ? { joined: true, name: o.name } : { joined: false, name: '' },
       ...game.view(ctx),
     };
@@ -109,7 +111,7 @@ export async function handleRoom(game, body, store, now = Date.now()) {
     }
     if (!code) return bad('방을 만들지 못했어요. 잠시 뒤 다시 해주세요', 503);
     const token = crypto.randomUUID();
-    const room = { code, created: now, round: 1, players: [{ token, name: cleanName(body.name) }, null] };
+    const room = { code, created: now, round: 1, players: [{ token, name: cleanName(body.name), uid: cleanUid(body.uid) }, null] };
     room.opts = game.options ? game.options(body || {}) : {};
     if (body.bot && game.bot) { room.players[1] = { token: null, name: BOT_NAME, bot: true }; room.lastAt = now; }
     game.setup(room);
@@ -126,7 +128,7 @@ export async function handleRoom(game, body, store, now = Date.now()) {
     if (isBotRoom(room)) return bad('AI 와 혼자 하는 방이라 들어갈 수 없어요', 409);
     if (room.players[1]) return bad('이미 두 명이 들어와 있어요', 409);
     const token = crypto.randomUUID();
-    room.players[1] = { token, name: cleanName(body.name) };
+    room.players[1] = { token, name: cleanName(body.name), uid: cleanUid(body.uid) };
     await store.set(roomKey(code), room);
     return ok(await load(room, 1), { token });
   }

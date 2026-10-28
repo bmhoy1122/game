@@ -181,6 +181,7 @@
   <a class="back" href="../">← 다른 게임</a>
 </div>
 <script src="../couple-common/picker.js"></script>
+<script src="../couple-common/report.js"></script>
 <script>
 /* =========================================================================
    숫자야구 — 각자 1~9 서로 다른 숫자 세 개를 숨기고 번갈아 맞힌다.
@@ -221,6 +222,7 @@ function adopt(data) {
   const roundChanged = !st || st.round !== data.round;
   st = data;
   tellOpener();                                   // st 가 갱신된 뒤 (bot 여부를 같이 보낸다)
+  Report.couple(SAVE.replace('couple-', ''), S, st);   // 판이 끝났으면 탕비실에 전적 보고 (한 번)
   if (roundChanged) { entry = ''; loadMemo(); }
   save();
   render();
@@ -472,7 +474,7 @@ $('tab-me').onclick = () => { tab = 'me'; render(); };
 $('tab-you').onclick = () => { tab = 'you'; render(); };
 const createRoom = (bot) => act(async () => {
   S.name = $('name').value.trim();
-  adopt(await api('create', { name: S.name, pick: chooser.get() , bot: !!bot }));
+  adopt(await api('create', { name: S.name, uid: Report.uid, pick: chooser.get() , bot: !!bot }));
   poll();
 });
 $('b-create').onclick = () => createRoom(false);
@@ -482,7 +484,7 @@ $('b-join').onclick = () => act(async () => {
   if (!/^\d{4}$/.test(c)) throw new Error('네 자리 숫자를 넣어주세요');
   S.name = $('name').value.trim();
   S.code = c;
-  adopt(await api('join', { code: c, name: S.name }));
+  adopt(await api('join', { code: c, name: S.name, uid: Report.uid }));
   poll();
 });
 $('b-again').onclick = () => act(async () => adopt(await api('restart', { round: st.round })));

@@ -166,6 +166,7 @@
   <a class="back" href="../">← 다른 게임</a>
 </div>
 <script src="../couple-common/picker.js"></script>
+<script src="../couple-common/report.js"></script>
 <script>
 /* =========================================================================
    커플 빙고 — 각자 폰에서 방 코드로 만나 번갈아 숫자를 부른다.
@@ -203,6 +204,7 @@ function adopt(data) {
   if (st && st.round !== data.round) localBoard = null;     // 새 판이면 새로 섞는다
   st = data;
   tellOpener();                                   // st 가 갱신된 뒤 (bot 여부를 같이 보낸다)
+  Report.couple(SAVE.replace('couple-', ''), S, st);   // 판이 끝났으면 탕비실에 전적 보고 (한 번)
   save();
   render();
 }
@@ -410,7 +412,7 @@ function render() {
 /* ------------------------------------------------------------------ 버튼 */
 const createRoom = (bot) => act(async () => {
   S.name = $('name').value.trim();
-  adopt(await api('create', { name: S.name, pick: chooser.get() , bot: !!bot }));
+  adopt(await api('create', { name: S.name, uid: Report.uid, pick: chooser.get() , bot: !!bot }));
   poll();
 });
 $('b-create').onclick = () => createRoom(false);
@@ -420,7 +422,7 @@ $('b-join').onclick = () => act(async () => {
   if (!/^\d{4}$/.test(c)) throw new Error('네 자리 숫자를 넣어주세요');
   S.name = $('name').value.trim();
   S.code = c;
-  adopt(await api('join', { code: c, name: S.name }));
+  adopt(await api('join', { code: c, name: S.name, uid: Report.uid }));
   poll();
 });
 $('b-shuffle').onclick = () => { localBoard = shuffled(); render(); };

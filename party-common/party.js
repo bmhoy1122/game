@@ -148,6 +148,7 @@
 
     let S = { code: null, token: null, you: null, name: '' };
     let st = null, timer = null, busy = false, toldCode = null, toastT = null;
+    const UID = window.Report ? Report.uid : null;        // 탕비실이 넘긴 메신저 계정 id (전적용, report.js)
     const gameEl = $('pt-game');
     const P = {
       esc, jo, COLORS, color: (i) => COLORS[i % COLORS.length],
@@ -176,7 +177,7 @@
       if (data.token) S.token = data.token;
       if (data.code) S.code = data.code;
       if (typeof data.you === 'number') S.you = data.you;
-      st = data; tellOpener(); save(); render();
+      st = data; tellOpener(); if (window.Report) Report.party(SAVE, S, st); save(); render();
     }
     function tellOpener() {
       if (!S.code || toldCode === S.code || !window.opener) return;
@@ -267,9 +268,9 @@
 
     /* 버튼 */
     const nameNow = () => { S.name = $('pt-name').value.trim(); return S.name; };
-    $('pt-create').onclick = () => act(async () => { nameNow(); adopt(await api('create', { name: S.name, max: +$('pt-max').value, bots: +$('pt-bots').value, teams: +$('pt-teams').value, ...(cfg.options ? cfg.options() : {}) })); });
-    $('pt-solo').onclick = () => act(async () => { nameNow(); const bots = soloBots(); adopt(await api('create', { name: S.name, max: Math.max(bots + 1, +$('pt-max').value), bot: true, bots, teams: +$('pt-teams').value, ...(cfg.options ? cfg.options() : {}) })); });
-    $('pt-join').onclick = () => act(async () => { const c = $('code').value.trim(); if (!/^\d{4}$/.test(c)) throw new Error('네 자리 숫자를 넣어주세요'); nameNow(); S.code = c; adopt(await api('join', { code: c, name: S.name })); });
+    $('pt-create').onclick = () => act(async () => { nameNow(); adopt(await api('create', { name: S.name, uid: UID, max: +$('pt-max').value, bots: +$('pt-bots').value, teams: +$('pt-teams').value, ...(cfg.options ? cfg.options() : {}) })); });
+    $('pt-solo').onclick = () => act(async () => { nameNow(); const bots = soloBots(); adopt(await api('create', { name: S.name, uid: UID, max: Math.max(bots + 1, +$('pt-max').value), bot: true, bots, teams: +$('pt-teams').value, ...(cfg.options ? cfg.options() : {}) })); });
+    $('pt-join').onclick = () => act(async () => { const c = $('code').value.trim(); if (!/^\d{4}$/.test(c)) throw new Error('네 자리 숫자를 넣어주세요'); nameNow(); S.code = c; adopt(await api('join', { code: c, name: S.name, uid: UID })); });
     ['pt-name', 'code'].forEach((id) => $(id).addEventListener('keydown', (e) => { if (e.key === 'Enter') $(id === 'code' ? 'pt-join' : 'pt-create').click(); }));
     $('pt-addbot').onclick = () => P.act('addbot'); $('pt-rmbot').onclick = () => P.act('removebot'); $('pt-start').onclick = () => P.act('start');
     $('pt-again').onclick = () => P.act('restart', { round: st.round });
