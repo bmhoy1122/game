@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1">
+<meta name="theme-color" content="#14332b">
+<title>블랙잭</title>
+<style>
+  :root{--accent:#c8902a;--soft:#f8f1e4;--ink:#2a2418;--mute:#7d7260;--line:#e6dcc8;--bg:radial-gradient(130% 80% at 50% 0%,#3f9a6f 0%,#1f6b4b 40%,#14332b 100%);
+    --pk-accent:#c8902a;--pk-soft:#f8f1e4;--pk-ink:#2a2418;--pk-line:#e6dcc8;--maxw:640px}
+  .pc{position:relative;width:46px;height:66px;border-radius:7px;background:#fff;border:1.5px solid #cfd8d3;box-shadow:0 1px 0 rgba(0,0,0,.15);display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:900;user-select:none;flex:none;line-height:1}
+  .pc .r{font-size:20px} .pc .s{font-size:18px} .pc.red{color:#d13b3b} .pc.blk{color:#1b2a24}
+  .pc.back{background:repeating-linear-gradient(45deg,#8a1f2a 0 6px,#661420 6px 12px);border-color:#4a0a12} .pc.back .r,.pc.back .s{display:none}
+  .pc.sm{width:34px;height:48px} .pc.sm .r{font-size:14px} .pc.sm .s{font-size:12px}
+  .felt{background:#1f6b4b;border-radius:18px;padding:12px;color:#fff}
+  .felt .dl{display:flex;align-items:center;gap:10px}
+  .felt .dl .cards{display:flex;gap:5px} .felt .dl .tt{font-size:14px;font-weight:900} .felt .dl .tt small{display:block;font-size:11px;opacity:.85;font-weight:700}
+  .felt .pot{font-size:11px;opacity:.85;font-weight:700;margin-top:6px}
+  .tbl{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
+  .seat{border-radius:12px;padding:8px;background:#f6f3ec;display:flex;flex-direction:column;gap:5px;min-width:0}
+  .seat.me{background:#fff4d6} .seat.turn{box-shadow:inset 0 0 0 2px #ffd166} .seat.out{opacity:.35}
+  .seat .nm{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .seat .chips{font-size:12px;color:var(--mute);font-weight:800} .seat .cards{display:flex;gap:3px;flex-wrap:wrap}
+  .seat .tt{font-size:13px;font-weight:900;color:#1f6b4b} .seat .tt.bust{color:#c0392b} .seat .tt.bj{color:#c8902a}
+  .seat .res{font-size:11px;font-weight:900;border-radius:999px;padding:2px 7px;align-self:flex-start;color:#fff;background:#8a8a8a}
+  .seat .res.win,.seat .res.blackjack{background:var(--accent)} .seat .res.push{background:#5f7a6d} .seat .res.lose,.seat .res.bust{background:#c0392b}
+  .mine{display:flex;gap:10px;align-items:center} .mine .cards{display:flex;gap:6px} .mine .tt{font-size:20px;font-weight:900;color:#1f6b4b} .mine .td{font-size:12px;color:var(--mute);font-weight:700}
+  .acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px} .acts button{flex:1 1 30%;padding:12px 6px;font-size:14px}
+  .acts .hit{background:#1f6b4b;color:#fff} .acts .double{background:linear-gradient(135deg,#ffb347,#c8902a);color:#fff} .acts .stand{background:#2a2418;color:#fff}
+  .nxt{margin-top:8px}
+  .hist{font-size:12px;color:var(--mute);line-height:1.5} .hist b{color:var(--ink)}
+  .dot{width:10px;height:10px;border-radius:50%;flex:none}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script src="../couple-common/rules.js"></script>
+<script src="../couple-common/report.js"></script>
+<script src="../party-common/party.js"></script>
+<script>
+const RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'], SUITS = ['♠', '♥', '♦', '♣'];
+const rankOf = (id) => id % 13, suitOf = (id) => Math.floor(id / 13) % 4;
+const card = (id, cls = '') => id === null || id === undefined ? `<div class="pc back ${cls}"></div>` : `<div class="pc ${suitOf(id) === 1 || suitOf(id) === 2 ? 'red' : 'blk'} ${cls}"><span class="r">${RANKS[rankOf(id)]}</span><span class="s">${SUITS[suitOf(id)]}</span></div>`;
+const RES = { win: '승 (1배)', blackjack: '블랙잭! (1.5배)', push: '비김', lose: '짐', bust: '버스트' };
+const RULES = `
+<h3>한눈에</h3><p>모두가 <b>딜러(은행)</b>와 겨뤄요 — 서로 겨루지 않아요. 카드 합을 21에 가깝게, 넘기면 버스트. 2~8명, 시작 칩 1000, 판마다 정한 금액(10·25·50)을 자동으로 걸어요.</p>
+<h3>카드 값</h3><p>2~10은 숫자 그대로, J·Q·K는 10, A는 11 또는 1(넘치면 1). 처음 두 장이 21이면 <b>블랙잭</b>.</p>
+<h3>한 판</h3><ol><li>각자 2장(공개) + 딜러 2장(한 장은 뒤집음). 딜러 앞장이 A·10이면 블랙잭인지 먼저 확인 — 딜러 블랙잭이면 바로 끝(내 블랙잭만 비김).</li><li>자리 순서대로 <b>히트</b>(한 장 더) · <b>스탠드</b>(멈춤) · <b>더블</b>(처음 두 장일 때, 걸은 만큼 더 걸고 딱 한 장만). 21을 넘기면 버스트.</li><li>모두 끝나면 딜러가 17 이상이 될 때까지 뽑아요(17이면 멈춤).</li></ol>
+<h3>정산</h3><ul><li>버스트 — 건 돈을 잃어요</li><li>블랙잭(더블 아닌 처음 두 장) — 1.5배</li><li>딜러 버스트 또는 내가 더 높음 — 1배</li><li>같으면 비김(돌려받음)</li></ul>
+<h3>끝</h3><p>정한 판 수(5·10·20)가 끝나거나 아무도 걸 수 없으면 끝 — 칩 많은 순.</p>
+<div class="rl-tip">기본 전략: 딜러 앞장이 7 이상이면 17까지 히트, 2~6이면 12~13부터 스탠드. 11은 더블, 10은 딜러 9 이하에 더블. 스플릿은 없어요(가볍게).</div>`;
+let built = false;
+const saved = (k, arr, d) => { try { const v = +localStorage.getItem('party-blackjack:' + k); return arr.includes(v) ? v : d; } catch (e) { return d; } };
+function build(el) {
+  el.innerHTML = `
+    <div class="banner" id="bn"></div>
+    <section class="felt"><div class="dl"><div class="cards" id="dcards"></div><div class="tt" id="dtt"></div></div><div class="pot" id="pot"></div></section>
+    <section class="card"><div class="tbl" id="tbl"></div></section>
+    <section class="card"><h2 id="mh">내 패</h2><div class="mine" id="mine"></div><div class="acts" id="acts"></div><button type="button" class="primary nxt hide" id="nx">다음 판 →</button></section>
+    <section class="card"><h2>지난 판</h2><div class="hist" id="hist"></div></section>`;
+  built = true;
+}
+const ttCls = (v, ids) => (v.total > 21 ? 'bust' : ids.length === 2 && v.total === 21 ? 'bj' : '');
+const ttTxt = (v, ids) => (v.total > 21 ? '버스트 ' + v.total : ids.length === 2 && v.total === 21 ? '블랙잭!' : (v.soft ? '소프트 ' : '') + v.total);
+function render(st, el, P) {
+  if (!built) build(el);
+  const $ = (id) => el.querySelector('#' + id);
+  const me = st.you, res = st.result, my = st.yourTurn, out = st.players[me].out, inHand = st.seats.includes(me);
+  $('bn').className = 'banner' + (my ? ' me' : '');
+  $('bn').innerHTML = res ? (res.dealerBJ ? '딜러 블랙잭!' : res.dealerBust ? '딜러 버스트 (' + res.dealerTotal + ') — 남은 사람 모두 승' : '딜러 ' + res.dealerTotal)
+    : my ? '내 차례 — 히트? 스탠드?' : st.turn === null ? '정리 중' : '<span class="dots">' + P.esc(P.jo(P.name(st.turn), '이', '가')) + ' 고민 중</span>';
+  $('dcards').innerHTML = st.dealer.map((c) => card(c, 'sm')).join('');
+  $('dtt').innerHTML = res ? '딜러 ' + res.dealerTotal + (res.dealerBust ? ' 버스트' : res.dealerBJ ? ' 블랙잭' : '') + '<small>' + (st.hand + 1) + ' / ' + st.total + '판</small>' : '딜러<small>' + (st.hand + 1) + ' / ' + st.total + '판 · 앞장 ' + (st.dealer[0] !== undefined ? RANKS[rankOf(st.dealer[0])] : '') + '</small>';
+  $('pot').textContent = '판당 ' + st.betSize + ' · 블랙잭 1.5배';
+  $('tbl').innerHTML = st.players.map((p, i) => {
+    const inH = st.seats.includes(i), ids = inH ? st.cards[i] : [], v = inH ? st.totals[i] : null, o = res && res.outcome[i];
+    return `<div class="seat${i === me ? ' me' : ''}${st.turn === i ? ' turn' : ''}${p.out || (!inH) ? ' out' : ''}"><div class="nm"><span class="dot" style="background:${P.color(i)}"></span>${P.esc(p.name)}${i === me ? ' (나)' : ''}</div><div class="chips">칩 ${st.chips[i]}${inH ? ' · 걸음 ' + st.bets[i] + (st.doubled[i] ? ' (더블)' : '') : ''}${p.out ? ' · 나감' : !inH ? ' · 구경' : ''}</div><div class="cards">${ids.map((c) => card(c, 'sm')).join('')}</div>${v ? `<div class="tt ${ttCls(v, ids)}">${ttTxt(v, ids)}</div>` : ''}${o ? `<div class="res ${o}">${RES[o]}${res.won[i] ? ' +' + res.won[i] : ''}</div>` : ''}</div>`;
+  }).join('');
+  const mine = inHand ? st.cards[me] : null, mv = inHand ? st.totals[me] : null;
+  $('mh').textContent = mine ? '내 패' : out ? '기권했어요 — 구경 중' : '칩이 모자라 이번 판은 구경';
+  $('mine').innerHTML = mine ? `<div class="cards">${mine.map((c) => card(c)).join('')}</div><div><div class="tt">${ttTxt(mv, mine)}</div><div class="td">${mv.total > 21 ? '넘쳤어요' : mv.total === 21 ? '멈추세요' : '딜러 앞장 ' + RANKS[rankOf(st.dealer[0])] + ' — ' + (rankOf(st.dealer[0]) === 12 || rankOf(st.dealer[0]) >= 5 ? '딜러가 세요, 17까지 가요' : '딜러가 약해요, 12~13이면 멈춰도 돼요')}</div></div>` : '';
+  $('acts').innerHTML = my ? st.options.map((o) => `<button type="button" class="${o.k}" data-k="${o.k}">${P.esc(o.label)}</button>`).join('') : '';
+  el.querySelectorAll('#acts button').forEach((b) => { b.onclick = () => P.act('play', { k: b.dataset.k }); });
+  $('nx').classList.toggle('hide', !res || out);
+  $('nx').textContent = st.hand + 1 >= st.total ? '결과 보기 →' : '다음 판 →';
+  $('nx').onclick = () => P.act('next', { hand: st.hand });
+  $('hist').innerHTML = st.history.slice().reverse().map((h) => `${h.hand + 1}판 — 딜러 ${h.dealerTotal}${h.dealerBust ? '(버스트)' : ''} · <b>${h.winners.length ? h.winners.map((w) => P.esc(P.name(w))).join('·') + ' 승' : '딜러 승'}</b>`).join('<br>') || '아직 없어요';
+}
+function final(st, P) {
+  return '<div class="hist" style="text-align:left">' + st.history.map((h) => `${h.hand + 1}판 — 딜러 ${h.dealerTotal}${h.dealerBust ? '(버스트)' : ''} · <b>${h.winners.length ? h.winners.map((w) => P.esc(P.name(w))).join('·') + ' 승' : '딜러 승'}</b>`).join('<br>') + '</div><div style="height:8px"></div>';
+}
+Party.init({
+  game: 'blackjack', title: '블랙잭', emoji: '🂡', sub: '2~8명 · 딜러와 21 겨루기 · 히트·스탠드·더블', maxDefault: 4, teamOptions: [0],
+  rules: { title: '🂡 블랙잭 규칙', html: RULES }, render, final, scoreUnit: '칩',
+  options: () => { const c = document.getElementById('pb-count'), b = document.getElementById('pb-bet'); return { count: c ? +c.value : saved('count', [5, 10, 20], 10), bet: b ? +b.value : saved('bet', [10, 25, 50], 25) }; },
+});
+(function () {
+  const teams = document.getElementById('pt-teams'), sc = saved('count', [5, 10, 20], 10), sb = saved('bet', [10, 25, 50], 25);
+  teams.insertAdjacentHTML('afterend', '<div class="row"><div><div class="lbl">판 수</div><select id="pb-count">' + [5, 10, 20].map((c) => `<option value="${c}"${c === sc ? ' selected' : ''}>${c}판</option>`).join('') + '</select></div><div><div class="lbl">판당 거는 칩</div><select id="pb-bet">' + [10, 25, 50].map((b) => `<option value="${b}"${b === sb ? ' selected' : ''}>${b}</option>`).join('') + '</select></div></div>');
+  document.getElementById('pb-count').addEventListener('change', (e) => { try { localStorage.setItem('party-blackjack:count', e.target.value); } catch (x) {} });
+  document.getElementById('pb-bet').addEventListener('change', (e) => { try { localStorage.setItem('party-blackjack:bet', e.target.value); } catch (x) {} });
+})();
+</script>
+</body>
+</html>

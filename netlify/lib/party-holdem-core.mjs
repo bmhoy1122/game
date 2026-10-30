@@ -141,7 +141,7 @@ function finish(room) {
       if (!eligible.length) { // 아무도 자격 없으면(다 다이) 남은 사람에게
         won[live[0]] += potPart; continue;
       }
-      let best = null; for (const i of eligible) if (!best || cmpHand(evals[i], evals[best]) > 0) best = i;
+      let best = null; for (const i of eligible) if (best === null || cmpHand(evals[i], evals[best]) > 0) best = i;   // 0번 자리는 falsy — !best 로 쓰면 0번이 늘 밀린다(실제로 겪음)
       const ws = eligible.filter((i) => cmpHand(evals[i], evals[best]) === 0);
       const share = Math.floor(potPart / ws.length); let rest = potPart - share * ws.length;
       for (const w of ws) { won[w] += share + (rest > 0 ? 1 : 0); if (rest > 0) rest--; }
