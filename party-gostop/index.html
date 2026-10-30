@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1">
+<meta name="theme-color" content="#1d4d2b">
+<title>고스톱 · 맞고</title>
+<style>
+  :root{--accent:#c0392b;--soft:#f6efe6;--ink:#2c2320;--mute:#7a6a60;--line:#e6d9cc;--bg:radial-gradient(130% 80% at 50% 0%,#5fae6f 0%,#2e7a44 40%,#1d4d2b 100%);
+    --pk-accent:#c0392b;--pk-soft:#f6efe6;--pk-ink:#2c2320;--pk-line:#e6d9cc;--maxw:620px}
+  .hw{position:relative;width:38px;height:58px;border-radius:5px;background:#fffdf7;border:1.5px solid #d9c9b4;box-shadow:0 1px 0 rgba(0,0,0,.15);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;font-weight:900;user-select:none;flex:none}
+  .hw .m{font-size:11px;color:#8a6d5a;position:absolute;top:2px;left:4px}
+  .hw .g{font-size:20px;line-height:1}
+  .hw .k{font-size:9px;color:#7a6a60;font-weight:800;position:absolute;bottom:2px;right:4px}
+  .hw.gwang{background:linear-gradient(160deg,#fff6c4,#ffd65c);border-color:#d6a600} .hw.gwang .m,.hw.gwang .k{color:#7a5a00}
+  .hw.yeol{background:linear-gradient(160deg,#f3fff2,#cdeec9);border-color:#7fb77e}
+  .hw.tti{background:linear-gradient(160deg,#fff,#f6e6e6)} .hw.tti .g{width:12px;height:30px;border-radius:3px}
+  .hw.hong .g{background:#d9534f} .hw.cho .g{background:#3b7dd8} .hw.cheong .g{background:#2a6f8a} .hw.bi .g{background:#8a6d5a}
+  .hw.ssang{background:linear-gradient(160deg,#fff,#efe7dd)} .hw.pi{background:#fffdf7}
+  .hw.sel{transform:translateY(-8px);box-shadow:0 0 0 3px #fff,0 0 0 6px var(--accent)}
+  .hw.can{outline:3px solid #ffd166}
+  .hw.ppuk::after{content:'뻑';position:absolute;top:-8px;right:-6px;background:#c0392b;color:#fff;font-size:9px;border-radius:999px;padding:1px 4px}
+  .hw.sm{width:26px;height:40px} .hw.sm .g{font-size:14px} .hw.sm .m{font-size:8px;top:1px;left:2px} .hw.sm .k{display:none}
+  .floor{display:flex;flex-wrap:wrap;gap:8px 10px;min-height:66px;align-items:flex-end}
+  .mon{display:flex;gap:-10px;position:relative} .mon .hw{margin-left:-14px} .mon .hw:first-child{margin-left:0}
+  .deck{width:38px;height:58px;border-radius:5px;background:#7a1f1f;color:#fff;display:grid;place-items:center;font-size:12px;font-weight:900;border:2px solid #4a0f0f;flex:none;margin-left:auto}
+  .hand{display:flex;flex-wrap:wrap;gap:8px;padding-top:8px}
+  .hand .hw{cursor:pointer}
+  .caps{display:flex;flex-direction:column;gap:8px}
+  .cap{border-radius:12px;padding:8px 10px;background:#fbf7f1}
+  .cap.me{background:#fff4d6} .cap.turn{box-shadow:inset 0 0 0 2px #ffd166}
+  .cap .hd{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:800}
+  .cap .hd .sc{margin-left:auto;font-weight:900;color:var(--accent)}
+  .cap .hd .go{font-size:11px;color:#fff;background:#c0392b;border-radius:999px;padding:1px 6px}
+  .cap .hd .sh{font-size:11px;color:#7a5a00;background:#ffe39a;border-radius:999px;padding:1px 6px}
+  .cap .grp{display:flex;flex-wrap:wrap;gap:3px;margin-top:5px;align-items:flex-end} .cap .grp .hw{margin-left:-8px} .cap .grp .hw:first-child{margin-left:0}
+  .cap .det{font-size:11px;color:var(--mute);font-weight:700;margin-top:4px}
+  .gs{display:flex;gap:8px} .gs button{flex:1;font-size:18px;padding:16px}
+  .gs .go{background:linear-gradient(135deg,#ff8a5c,#e8503a);color:#fff} .gs .stop{background:#2c2320;color:#fff}
+  .res{text-align:left;font-size:13px} .res .l{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px dashed var(--line)}
+  .dot{width:10px;height:10px;border-radius:50%;flex:none}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script src="../couple-common/rules.js"></script>
+<script src="../couple-common/report.js"></script>
+<script src="../party-common/party.js"></script>
+<script>
+const DEF = { 1: ['gwang', 'tti', 'pi', 'pi'], 2: ['yeol', 'tti', 'pi', 'pi'], 3: ['gwang', 'tti', 'pi', 'pi'], 4: ['yeol', 'tti', 'pi', 'pi'], 5: ['yeol', 'tti', 'pi', 'pi'], 6: ['yeol', 'tti', 'pi', 'pi'],
+  7: ['yeol', 'tti', 'pi', 'pi'], 8: ['gwang', 'yeol', 'pi', 'pi'], 9: ['yeol', 'tti', 'pi', 'pi'], 10: ['yeol', 'tti', 'pi', 'pi'], 11: ['gwang', 'ssang', 'pi', 'pi'], 12: ['gwang', 'yeol', 'tti', 'ssang'] };
+const MNAME = ['', '송학', '매조', '벚꽃', '흑싸리', '난초', '모란', '홍싸리', '공산', '국화', '단풍', '오동', '비'];
+const YEOL = { 2: '🐦', 4: '🐦', 5: '🌉', 6: '🦋', 7: '🐗', 8: '🦆', 9: '🍶', 10: '🦌', 12: '🐤' };
+const PI = { 1: '🌲', 2: '🌸', 3: '🌸', 4: '🌿', 5: '🌷', 6: '🌺', 7: '🍀', 8: '🌕', 9: '🌼', 10: '🍁', 11: '🌳', 12: '🌧️' };
+const month = (id) => Math.floor(id / 4) + 1, kind = (id) => DEF[month(id)][id % 4];
+const ttiCol = (m) => ([1, 2, 3].includes(m) ? 'hong' : [4, 5, 7].includes(m) ? 'cho' : [6, 9, 10].includes(m) ? 'cheong' : 'bi');
+const KN = { gwang: '광', yeol: '열끗', tti: '띠', pi: '피', ssang: '쌍피' };
+function card(id, cls = '') {
+  const m = month(id), k = kind(id);
+  const glyph = k === 'gwang' ? '光' : k === 'yeol' ? YEOL[m] : k === 'tti' ? '' : k === 'ssang' ? PI[m] + '<small style="font-size:9px">×2</small>' : PI[m];
+  return `<div class="hw ${k}${k === 'tti' ? ' ' + ttiCol(m) : ''} ${cls}" data-id="${id}" title="${m}월 ${MNAME[m]} ${KN[k]}"><span class="m">${m}</span><span class="g">${glyph}</span><span class="k">${KN[k]}</span></div>`;
+}
+const RULES = `
+<h3>한눈에</h3><p>화투 48장. 손에서 한 장 내고 더미에서 한 장 뒤집어 <b>같은 달</b> 패를 가져와요. 모은 패로 점수가 나면 <b>고</b>(더 간다, 점수 ×)나 <b>스톱</b>(끝)을 골라요. <b>2명이면 맞고(7점)</b>, <b>3명이면 고스톱(3점)</b>.</p>
+<h3>패 종류</h3><ul><li><b>광</b> 5장 (1·3·8·11·12월, 12월은 비광)</li><li><b>열끗</b> 9장 — 2·4·8월 새 셋이 <b>고도리</b></li><li><b>띠</b> 10장 — 홍단(1·2·3) · 초단(4·5·7) · 청단(6·9·10)</li><li><b>피</b> — 11·12월에 <b>쌍피</b>(2장으로 셈)</li></ul>
+<h3>점수</h3><ul><li>광 3장 3점(비광 끼면 2점) · 4장 4점 · 5장 15점</li><li>열끗 5장부터 1점씩 · 고도리 +5</li><li>띠 5장부터 1점씩 · 홍단·초단·청단 각 +3</li><li>피 10장부터 1점씩</li></ul>
+<h3>특수</h3><ul><li><b>쪽</b> 낸 패가 짝이 없었는데 뒤집은 패가 같은 달 → 둘 다 가져오고 상대 피 한 장씩</li><li><b>따닥</b> 바닥에 같은 달 2장인데 뒤집은 패까지 같은 달 → 넷 다 가져오고 피 한 장씩</li><li><b>뻑</b> 낸 패가 짝과 맞았는데 뒤집은 패까지 같은 달 → 셋 다 바닥에 남아요. 나중에 가져가는 사람이 피 한 장씩</li><li><b>싹쓸이</b> 내 차례 끝에 바닥이 비면 피 한 장씩</li><li><b>흔들기</b> 손에 같은 달 3장이면 자동 선언, 이기면 ×2 · <b>폭탄</b> 같은 달 3장 + 바닥 1장 → 넷 다 가져오고 ×2</li></ul>
+<h3>고 · 스톱</h3><p>점수가 나면 고르기. 1고 +1점, 2고 +2점, 3고부터 ×2씩. 이기면 (점수+고)×흔들기 에 진 사람마다 <b>피박</b>(피 점수 났는데 상대 피 6장 이하 · 피 0장이면 면제) · <b>광박</b>(광 점수 났는데 상대 광 0장) · <b>멍박</b>(열끗 7장 이상인데 상대 열끗 0장) ×2. 3명에선 고를 불렀다 지면 <b>고박</b> — 남의 몫까지 내요. 패가 다 떨어지도록 아무도 스톱 못 하면 <b>나가리</b>.</p>
+<div class="rl-ex">예: 삼광 3 + 피 12장 3 = 6점에 1고 → 7점. 상대 피가 5장이면 피박 ×2 = 14점.</div>
+<div class="rl-tip">바닥에 같은 달이 2장이면 좋은 쪽(광·열끗)을 자동으로 가져와요. 돈은 안 다뤄요 — 점수만 기록돼요.</div>`;
+let built = false, sel = null, lastTurn = -1;
+function build(el) {
+  el.innerHTML = `
+    <div class="banner" id="bn"></div>
+    <section class="card"><h2 id="fh">바닥</h2><div class="floor" id="floor"></div></section>
+    <section class="card"><h2 id="hh">내 손패</h2><div class="hand" id="hand"></div>
+      <div class="gs hide" id="gs"><button type="button" class="go" id="b-go">고!</button><button type="button" class="stop" id="b-stop">스톱</button></div></section>
+    <section class="card"><h2>잡은 패 · 점수</h2><div class="caps" id="caps"></div></section>
+    <section class="card"><h2>기록</h2><div class="log" id="log"></div></section>`;
+  built = true;
+}
+const groupByMonth = (ids) => { const m = {}; for (const id of ids) (m[month(id)] = m[month(id)] || []).push(id); return Object.keys(m).map(Number).sort((a, b) => a - b).map((k) => m[k]); };
+const grpKinds = (ids) => ['gwang', 'yeol', 'tti', 'ssang', 'pi'].map((k) => ids.filter((c) => kind(c) === k)).filter((a) => a.length);
+function render(st, el, P) {
+  if (!built) build(el);
+  const $ = (id) => el.querySelector('#' + id);
+  if (st.turnNo !== lastTurn) { lastTurn = st.turnNo; sel = null; }
+  const me = st.you, my = st.yourTurn;
+  $('bn').className = 'banner' + (my ? ' me' : '');
+  $('bn').innerHTML = !my ? '<span class="dots">' + P.esc(P.jo(P.name(st.turn), '이', '가')) + ' 하는 중</span>'
+    : st.step === 'gostop' ? `점수가 났어요 (${st.scores[me]}점) — 고? 스톱?` : '내 차례 — 낼 패를 고르고 한 번 더 누르면 내요';
+  $('fh').textContent = '바닥 ' + st.floor.length + '장 · 더미 ' + st.deck + '장' + (st.threshold ? ' · ' + st.threshold + '점 나면 고/스톱' : '');
+  const floorMonths = new Set(st.floor.map(month));
+  $('floor').innerHTML = groupByMonth(st.floor).map((g) => `<div class="mon">${g.map((id, k) => card(id, (st.ppuk.includes(month(id)) && k === g.length - 1 ? 'ppuk' : '') + (sel !== null && month(sel) === month(id) ? ' can' : ''))).join('')}</div>`).join('') + `<div class="deck">${st.deck}</div>`;
+  $('hh').textContent = '내 손패 ' + st.hand.length + '장' + (st.shake[me] ? ' · 흔들기 ×' + 2 ** st.shake[me] : '');
+  $('hand').innerHTML = st.hand.map((id) => card(id, (sel === id ? 'sel' : '') + (floorMonths.has(month(id)) ? ' can' : ''))).join('');
+  el.querySelectorAll('#hand .hw').forEach((d) => { d.onclick = () => { const id = +d.dataset.id; if (!my || st.step !== 'play') return; if (sel === id) P.act('play', { card: id }); else { sel = id; render(st, el, P); } }; });
+  $('gs').classList.toggle('hide', !(my && st.step === 'gostop'));
+  $('b-go').disabled = !st.hand.length; $('b-go').textContent = st.hand.length ? `고! (${st.go[me] + 1}고)` : '고 불가 (손패 없음)';
+  $('b-go').onclick = () => P.act('go'); $('b-stop').onclick = () => P.act('stop');
+  $('caps').innerHTML = st.players.map((p, i) => `<div class="cap${i === me ? ' me' : ''}${st.turn === i ? ' turn' : ''}"><div class="hd"><span class="dot" style="background:${P.color(i)}"></span>${P.esc(p.name)}${i === me ? ' (나)' : ''}${p.out ? ' (나감)' : ''} <small>손 ${st.handCounts[i]}장</small>${st.go[i] ? `<span class="go">${st.go[i]}고</span>` : ''}${st.shake[i] ? `<span class="sh">흔들기 ×${2 ** st.shake[i]}</span>` : ''}<span class="sc">${st.scores[i]}점</span></div>`
+    + `<div class="grp">${grpKinds(st.caps[i]).map((g) => g.map((id) => card(id, 'sm')).join('')).join('<span style="width:6px"></span>')}</div>`
+    + (st.details[i].length ? `<div class="det">${P.esc(st.details[i].join(' · '))}</div>` : '') + '</div>').join('');
+  const L = { play: (e) => `${month(e.card)}월 냄${e.got.length ? ' → ' + e.got.length + '장 가져옴' : ''}`, jjok: () => '🎯 쪽!', ddadak: () => '🎯 따닥!', ppuk: () => '😬 뻑', ppukget: () => '🎯 뻑 가져감!', sweep: () => '🧹 싹쓸이!', steal: (e) => `피 ${e.n}장 뺏음`, go: (e) => `<b>${e.n}고!</b>`, stop: () => '<b>스톱!</b>', shake: (e) => `${e.m}월 흔들기 ×2`, bomb: (e) => `💣 ${e.m}월 폭탄!`, nagari: () => '나가리' };
+  $('log').innerHTML = st.log.slice().reverse().map((e) => `${e.by === null || e.by === undefined ? '' : '<b>' + P.esc(P.name(e.by)) + '</b> '}${L[e.t] ? L[e.t](e) : e.t}`).join('<br>');
+}
+function final(st, P) {
+  const r = st.result; if (!r) return '';
+  if (r.nagari) return '<p class="res">나가리 — 아무도 스톱하지 못했어요. 점수 없음.</p>';
+  if (r.forfeit) return '<p class="res">상대가 모두 나가서 끝났어요.</p>';
+  return `<div class="res"><div class="l"><span>${P.esc(P.name(r.winner))} — ${r.lines.join(' · ')}</span><b>${r.pts}점</b></div>`
+    + st.players.map((p, i) => (i === r.winner || p.out ? '' : `<div class="l"><span>${P.esc(p.name)}${r.tags && r.tags[i].length ? ' (' + r.tags[i].join('·') + ')' : ''}</span><b>−${r.pays[i]}</b></div>`)).join('') + '</div>';
+}
+Party.init({
+  game: 'gostop', title: '고스톱 · 맞고', emoji: '🎴', sub: '2명이면 맞고(7점) · 3명이면 고스톱(3점)', maxDefault: 3, maxSeats: 3, teamOptions: [0],
+  rules: { title: '🎴 고스톱 · 맞고 규칙', html: RULES }, render, final, scoreUnit: '점',
+});
+</script>
+</body>
+</html>

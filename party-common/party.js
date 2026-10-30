@@ -4,7 +4,7 @@
  *     game: 'bingo',                       // POST /api/party-bingo, 저장 키 party-bingo
  *     title: '여럿이 빙고', emoji: '🔢', sub: '한 줄 소개',
  *     rules: { title, html },              // 규칙 설명 (couple-common/rules.js)
- *     maxDefault: 4,
+ *     maxDefault: 4, maxSeats: 8,              // maxSeats 는 자리 상한 (서버 game.maxSeats 와 맞출 것)
  *     render(st, el, P),                   // 게임 화면 그리기 (play 단계). el = #game. P = Party 핸들
  *   })
  * 서버가 주는 공통 상태: code · round · you · host · phase(lobby|play) · max · players[{name,bot,out,me,team}] · first · teams
@@ -131,8 +131,9 @@
         <button type="button" class="ghost" id="pt-home2">홈으로</button>
       </section>`;
     const $ = (id) => document.getElementById(id);
-    for (let m = 2; m <= 8; m++) $('pt-max').insertAdjacentHTML('beforeend', `<option value="${m}" ${m === (cfg.maxDefault || 4) ? 'selected' : ''}>${m}명</option>`);
-    for (let b = 0; b <= 7; b++) $('pt-bots').insertAdjacentHTML('beforeend', `<option value="${b}">${b ? b + '명' : '없음'}</option>`);
+    const CAP = Math.max(2, Math.min(8, cfg.maxSeats || 8));                  // 게임이 자리를 좁힐 수 있다 (고스톱 3)
+    for (let m = 2; m <= CAP; m++) $('pt-max').insertAdjacentHTML('beforeend', `<option value="${m}" ${m === Math.min(cfg.maxDefault || 4, CAP) ? 'selected' : ''}>${m}명</option>`);
+    for (let b = 0; b <= CAP - 1; b++) $('pt-bots').insertAdjacentHTML('beforeend', `<option value="${b}">${b ? b + '명' : '없음'}</option>`);
     const TEAM_OPTS = cfg.teamOptions || [0, 2, 3, 4];
     const teamLabel = (n) => (n ? n + '팀 팀전' : '개인전');
     TEAM_OPTS.forEach((n) => $('pt-teams').insertAdjacentHTML('beforeend', `<option value="${n}">${teamLabel(n)}</option>`));
@@ -142,7 +143,7 @@
     if (TEAM_OPTS.some((n) => n)) { const b = document.createElement('button'); b.type = 'button'; b.id = 'pt-shuffle'; b.textContent = '🔀 섞기'; b.onclick = () => P.act('shuffleteams'); $('pt-teamrow').appendChild(b); }
     const teamTag = (t) => (t === null || t === undefined ? '' : `<span class="tm" style="background:${TEAM_COLORS[t]}">${TEAM_ICONS[t]} ${TEAM_NAMES[t]}</span>`);
     // 혼자 하기는 AI 가 최소 한 명 — 셀렉트 '없음'이면 3명으로 친다. 버튼 글자에 몇 명과 시작하는지 보여준다
-    const soloBots = () => Math.max(1, +$('pt-bots').value || 3);
+    const soloBots = () => Math.min(CAP - 1, Math.max(1, +$('pt-bots').value || 3));
     const paintSolo = () => { $('pt-solo').textContent = '🤖 혼자 하기 (AI ' + soloBots() + '명과 바로 시작)'; };
     $('pt-bots').addEventListener('change', paintSolo); paintSolo();
 
@@ -288,7 +289,7 @@
       show('pt-home');
       const q = new URLSearchParams(location.search);
       const urlCode = q.get('code'), urlName = (q.get('name') || '').trim().slice(0, 8), urlBot = q.get('bot') === '1';
-      const urlBots = Math.max(1, Math.min(7, parseInt(q.get('bots'), 10) || 3));          // ?bot=1&bots=N — 탕비실에서 AI 수를 골라 옴 (기본 3)
+      const urlBots = Math.max(1, Math.min(CAP - 1, parseInt(q.get('bots'), 10) || 3));          // ?bot=1&bots=N — 탕비실에서 AI 수를 골라 옴 (기본 3)
       let saved = null;
       try { saved = JSON.parse(localStorage.getItem(SAVE) || 'null'); } catch (e) {}
       if (saved && saved.name) { S.name = saved.name; $('pt-name').value = saved.name; }

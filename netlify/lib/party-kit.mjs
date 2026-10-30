@@ -23,6 +23,7 @@
  *     kit 가 view 에 team = { winners:[팀], scores:[팀별], rank } 를 붙인다. 자리별 winners·rank 는 그대로 둔다.
  *   · 게임이 "한 명 남으면 끝"을 볼 땐 oneSideLeft(room, seats) — 팀전이면 "한 팀만 남으면 끝".
  *   · game.teamOptions = 고를 수 있는 팀 수 (기본 [0,2,3,4]). 0 이 없으면 팀전만 되는 게임(팀 오목).
+ *   · game.maxSeats = 자리 상한 (기본 8). 고스톱은 3.
  */
 import { seeded, shuffle, ROOM_TTL } from './room-kit.mjs';
 export { seeded, shuffle, ROOM_TTL };
@@ -161,15 +162,16 @@ export async function handleParty(game, body, store, now = Date.now()) {
     let code = null;
     for (let i = 0; i < 12 && !code; i++) { const c = code4(); if (!alive(await store.get(roomKey(c)), now)) code = c; }
     if (!code) return bad('방을 만들지 못했어요. 잠시 뒤 다시 해주세요', 503);
-    let max = Number(body.max); if (!Number.isInteger(max)) max = 4;
-    max = Math.max(MIN_SEATS, Math.min(MAX_SEATS, max));
+    const seatCap = Math.min(MAX_SEATS, game.maxSeats || MAX_SEATS);        // 게임이 자리를 더 좁힐 수 있다 (고스톱 3)
+    let max = Number(body.max); if (!Number.isInteger(max)) max = Math.min(4, seatCap);
+    max = Math.max(MIN_SEATS, Math.min(seatCap, max));
     const token = crypto.randomUUID();
     const room = { code, created: now, round: 1, max, phase: 'lobby', host: 0, players: [{ token, name: cleanName(body.name), uid: cleanUid(body.uid) }], out: [], lastAt: now };
     room.opts = game.options ? game.options(body || {}) : {};
     const tn = Number(body.teams), opts = teamOptions(game);
     room.teams = opts.includes(tn) ? tn : opts.includes(0) ? 0 : opts[0];
     if (room.teams) room.players[0].team = 0;
-    let bots = Math.max(0, Math.min(MAX_SEATS - 1, Number(body.bots) || 0));
+    let bots = Math.max(0, Math.min(seatCap - 1, Number(body.bots) || 0));
     if (body.bot) { bots = Math.max(1, bots); if (max < bots + 1) { max = bots + 1; room.max = max; } }   // 혼자 하기 — AI 수만큼 자리를 늘린다
     for (let i = 0; i < bots && room.players.length < max; i++) {
       room.players.push({ token: null, name: BOT_NAME + (i ? ' ' + (i + 1) : ''), bot: true });
