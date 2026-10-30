@@ -122,15 +122,17 @@ function memStore() {
       now.winner === 'draw' || now.lines[now.winner] >= WIN_LINES, '줄 ' + JSON.stringify(now.lines));
     check('끝난 뒤에는 못 부른다', (await call({ action: 'call', code, token: tokens[0], n: 25 })).status === 409);
 
-    // 한쪽만 이기는 경우 — 1~15 를 부르면 A 는 가로 3줄, B 는 0줄
-    const loseB = [1, 2, 3, 4, 16, 5, 6, 7, 8, 17, 9, 10, 11, 12, 18, 13, 14, 15, 19, 20, 21, 22, 23, 24, 25];
+    // 한쪽만 이기는 경우 — 1~21 을 부르면 A(1~25 순서 판)는 가로 4줄 + 첫 세로줄(1·6·11·16·21) = 5줄.
+    // B 는 22~25 를 (0,0)·(1,3)·(2,4)·(3,2) 에 두어 그 네 칸이 가로 4·세로 4·대각 2 = 10줄을 막는다 → 2줄뿐
+    const loseB = [22, 1, 2, 3, 4, 5, 6, 7, 23, 8, 9, 10, 11, 12, 24, 13, 14, 25, 15, 16, 17, 18, 19, 20, 21];
+    check('(검증 판) B 판이 유효하다', validBoard(loseB));
     const g = await newGame(ok25, loseB);
     let gs = (await call({ action: 'state', code: g.code, token: g.tk[0] })).body;
-    for (let n = 1; n <= 15 && gs.phase === 'play'; n++) {
+    for (let n = 1; n <= 21 && gs.phase === 'play'; n++) {
       gs = (await call({ action: 'call', code: g.code, token: g.tk[gs.turn], n })).body;
     }
-    check('가로 3줄이 완성되는 순간 끝난다', gs.phase === 'done' && gs.called.length === 15, gs.called.length + '번째');
-    check('3줄 만든 A 가 이긴다', gs.winner === 0, '줄 ' + JSON.stringify(gs.lines));
+    check(`${WIN_LINES}줄이 완성되는 순간 끝난다`, gs.phase === 'done' && gs.called.length === 21, gs.called.length + '번째 · 줄 ' + JSON.stringify(gs.lines));
+    check(`${WIN_LINES}줄 만든 A 가 이긴다 (B 는 2줄)`, gs.winner === 0 && gs.lines[1] === 2, '줄 ' + JSON.stringify(gs.lines));
     const seenByB = (await call({ action: 'state', code: g.code, token: g.tk[1] })).body;
     check('진 사람도 같은 결과를 본다', seenByB.winner === 0 && seenByB.phase === 'done');
 

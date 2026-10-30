@@ -5,7 +5,7 @@
 | 폴더 | 게임 | 서버 |
 |---|---|---|
 | `evening-night/` | 어쩐지 좋은 기분이 드는 밤 — 세 살 아이와 같이 하는 횡스크롤 | 없음 |
-| `couple-bingo/` | 커플 빙고 — 번갈아 숫자를 불러 3줄 먼저 | `/api/bingo` |
+| `couple-bingo/` | 커플 빙고 — 번갈아 숫자를 불러 5줄 먼저 | `/api/bingo` |
 | `couple-wordbingo/` | 단어 빙고 — 주제를 정하고 각자 판에 단어를 직접 써서 하는 빙고 | `/api/wordbingo` |
 | `couple-balance/` | 이심전심 — 둘이 동시에 고르고 같이 공개, 일치율 | `/api/balance` |
 | `couple-baseball/` | 숫자야구 — 숨긴 숫자 세 개를 번갈아 맞히기 | `/api/baseball` |

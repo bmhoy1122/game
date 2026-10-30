@@ -54,7 +54,7 @@ function memStore() {
     const nr = normRules({ black: { three: 1, four: 'x' }, white: null, junk: true });
     check('받은 규칙은 true/false 여섯 개로 다시 만든다', JSON.stringify(nr) ===
       JSON.stringify({ black: { three: true, four: true, long: false }, white: { three: false, four: false, long: false } }));
-    check('규칙을 안 보내면 세이클럽식', JSON.stringify(normRules()) === JSON.stringify(SAY));
+    check('규칙을 안 보내면 렌주 (2026-10 기본)', JSON.stringify(normRules()) === JSON.stringify(PRESETS.renju));
     const six = B([[7, 2], [7, 3], [7, 4], [7, 5], [7, 6], [7, 7]]);
     check('딱 다섯만 치면 여섯은 이긴 게 아니다', !fiveAt(six, 7, 7, true) && !!fiveAt(six, 7, 7, false));
 
@@ -119,10 +119,10 @@ function memStore() {
     check('렌주면 백은 쌍삼을 둬도 된다', ok3.status === 200);
     check('방 규칙이 응답에 실린다', ok3.body.rules.black.four === true && ok3.body.rules.white.three === false);
 
-    // 세이클럽식(기본) — 백도 쌍삼을 못 두고, 백 차례에 × 가 간다
+    // 세이클럽식(명시) — 백도 쌍삼을 못 두고, 백 차례에 × 가 간다
     const s6 = memStore();
     const c6 = (bb) => G.handle(bb, s6);
-    const u6 = (await c6({ action: 'create', pick: 'coin' })).body;
+    const u6 = (await c6({ action: 'create', pick: 'coin', rules: SAY })).body;
     const v6 = (await c6({ action: 'join', code: u6.code })).body;
     const t6 = [u6.token, v6.token], f6 = v6.first, w6 = 1 - f6;
     const p6 = (i, rr, cc) => c6({ action: 'place', code: u6.code, token: t6[i], r: rr, c: cc });

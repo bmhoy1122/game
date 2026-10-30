@@ -86,7 +86,7 @@ const PRESETS = {
 };
 const PRESET_NOTE = {
   say: '세이클럽·한게임 시절 일반룰이에요. 흑백 모두 삼삼 금지, 여섯 개 이상(장목)도 못 둬요. 사사는 돼요.',
-  renju: '렌주룰이에요. 먼저 두는 흑만 삼삼·사사·장목이 금지고, 백은 자유예요.',
+  renju: '기본값. 렌주룰이에요. 먼저 두는 흑만 삼삼·사사·장목이 금지고, 백은 자유예요.',
   free: '아무 데나 둬요. 먼저 두는 흑이 많이 유리해요.',
 };
 const RULE_SAVE = 'party-gomoku:rules';
@@ -96,7 +96,7 @@ const ruleList = (one) => RULE_KEYS.filter((k) => one && one[k]).map((k) => RULE
 const rulesLine = (r) => '✕ 금수 — 흑 ' + (ruleList(r.black) || '없음') + ' / 백 ' + (ruleList(r.white) || '없음');
 let myRules = (() => {
   try { const r = JSON.parse(localStorage.getItem(RULE_SAVE) || 'null'); if (r && r.black && r.white) return r; } catch (e) {}
-  return JSON.parse(JSON.stringify(PRESETS.say));
+  return JSON.parse(JSON.stringify(PRESETS.renju));   // 기본 렌주 (2026-10)
 })();
 function mountRuleEditor(P) {
   const sel = P.$('pt-teams');
@@ -104,7 +104,7 @@ function mountRuleEditor(P) {
   sel.insertAdjacentHTML('afterend', `
     <p class="teamnote">흑팀 ⚫ · 백팀 ⚪ — 팀은 대기실에서 방장이 정해요</p>
     <div class="lbl" style="margin-top:12px">안 되는 수 (금수) ✕</div>
-    <div class="presets" id="gr-presets"><button type="button" data-p="say">세이클럽식</button><button type="button" data-p="renju">렌주</button><button type="button" data-p="free">금수 없음</button></div>
+    <div class="presets" id="gr-presets"><button type="button" data-p="renju">렌주</button><button type="button" data-p="say">세이클럽식</button><button type="button" data-p="free">금수 없음</button></div>
     <table class="grules" id="gr-table">
       <tr><th></th><th>흑 ⚫</th><th>백 ⚪</th></tr>
       ${RULE_KEYS.map((k) => `<tr><td>${RULE_NAME[k]}<small>${{ three: '열린 삼 두 개를 한 번에', four: '넷 두 개를 한 번에', long: '여섯 개 이상 잇기' }[k]}</small></td>
