@@ -48,7 +48,7 @@ async function playOut(core, humans, bots, max, opts, invariant, maxSteps = 4000
 }
 
 (async () => {
-  const G = await lib('party-gostop-core.mjs'), S = await lib('party-seotda-core.mjs'), H = await lib('party-holdem-core.mjs');
+  const G = await lib('party-gostop-core.mjs'), S = await lib('party-seotda-core.mjs'), H = await lib('party-holdem-core.mjs'), B = await lib('party-blackjack-core.mjs');
   try {
     /* ---------- 고스톱 점수 ---------- */
     {
@@ -173,7 +173,38 @@ async function playOut(core, humans, bots, max, opts, invariant, maxSteps = 4000
       if (!c2.result.evals) { console.log('  사이드팟 디버그', JSON.stringify({ folded: c2.folded, allin: c2.allin, total: c2.total, street: c2.street, log: g2.log.slice(-6) })); }
       const ranks = c2.result.evals ? [0, 1, 2].map((i) => c2.result.evals[i]) : [];
       const bestI = c2.result.evals ? [0, 1, 2].sort((a, b) => H.cmpHand(c2.result.evals[b], c2.result.evals[a]))[0] : 0;
-      check('홀덤 사이드팟: 적게 건 사람은 자기 몫까지만 받는다', c2.result.won[bestI] <= (bestI === 0 ? 150 : bestI === 1 ? 450 : 1250) && Object.values(c2.result.won).reduce((a, b) => a + b, 0) === c2.pot, JSON.stringify(c2.result.won) + ' ' + ranks.map((e) => e.name).join('/'));
+      const cap = [0, 1, 2].reduce((a, p) => a + Math.min(c2.total[p], c2.total[bestI]), 0);   // 이긴 사람이 받을 수 있는 최대 = 자기가 건 만큼까지 각자에게서
+      check('홀덤 사이드팟: 적게 건 사람은 자기 몫까지만 받는다', c2.result.won[bestI] <= cap && c2.result.won[bestI] > 0 && Object.values(c2.result.won).reduce((a, b) => a + b, 0) === c2.pot, JSON.stringify(c2.result.won) + ' cap ' + cap + ' ' + ranks.map((e) => e.name).join('/'));
+    }
+    /* ---------- 블랙잭 ---------- */
+    {
+      const C = (r, s = 0) => s * 13 + ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'].indexOf(r);
+      check('블랙잭: 합계 — K+5 = 15, A+6 = 소프트 17, A+6+9 = 16', B.handValue([C('K'), C('5')]).total === 15 && B.handValue([C('A'), C('6')]).soft && B.handValue([C('A'), C('6')]).total === 17 && B.handValue([C('A'), C('6'), C('9')]).total === 16);
+      check('블랙잭: A+A = 12, A+K = 블랙잭', B.handValue([C('A'), C('A', 1)]).total === 12 && B.isBlackjack([C('A'), C('K')]));
+      check('블랙잭 기본 전략: 11 더블 · 16 vs 10 히트 · 13 vs 6 스탠드 · 소프트 18 vs 9 히트', B.basicMove([C('6'), C('5')], C('9'), true) === 'double' && B.basicMove([C('10'), C('6')], C('K'), true) === 'hit' && B.basicMove([C('8'), C('5')], C('6'), true) === 'stand' && B.basicMove([C('A'), C('7')], C('9'), true) === 'hit');
+      for (const [humans, bots, count] of [[1, 3, 10], [1, 7, 20], [2, 0, 5], [3, 2, 10]]) {
+        const np = humans + bots; let bj = 0, bust = 0, neg = 0, dealerHidden = 0;
+        const inv = (v, rm, h) => {
+          const g = rm.g, cur = g.cur;
+          if (g.chips.some((c) => c < 0)) neg++;
+          if (cur && cur.stage === 'play' && v.dealer[1] !== null) dealerHidden++;                       // 플레이 중엔 딜러 두 번째 장 숨김
+          if (cur && cur.stage === 'result') { for (const i of cur.seats) { if (cur.result.outcome[i] === 'blackjack') bj++; if (cur.result.outcome[i] === 'bust') bust++; } }
+          if (cur && cur.stage === 'play' && cur.turn !== null && cur.done[cur.turn]) throw new Error('끝난 사람 차례');
+        };
+        const { r, steps } = await playOut(B, humans, bots, np, { count, bet: 25 }, inv, 6000);
+        check(`블랙잭 ${np}명 ${count}판(사람 ${humans}): 끝까지 — 칩 ${JSON.stringify(r.body.chips)} 우승 ${JSON.stringify(r.body.winners)}`, r.body.stage === 'done' && neg === 0 && dealerHidden === 0 && Array.isArray(r.body.rank) && r.body.history.length >= 1, steps + '걸음 · 블랙잭 ' + bj + ' · 버스트 ' + bust);
+      }
+      // 정산 검사 — 손을 직접 만들어 finish 를 돌린다
+      const t = table(B, 2, 0, 2, { count: 5, bet: 10 }); await t.open(); await t.start();
+      const rm = await t.room(); const cur = rm.g.cur;
+      cur.cards[0] = [C('A'), C('K')]; cur.cards[1] = [C('9'), C('8')]; cur.dealer = [C('10'), C('7')]; cur.deck = [C('2'), C('3')]; cur.done[0] = true; cur.done[1] = true;
+      const before = rm.g.chips.slice(); cur.turn = null; cur.stage = 'play'; cur.doubled = { 0: false, 1: false };
+      await t.store.set('room:' + rm.code, rm);
+      // 사람 1 이 스탠드하면 끝난다 — turn 을 1 로 두고 스탠드
+      cur.done[1] = false; cur.turn = 1; await t.store.set('room:' + rm.code, rm);
+      const rr = await t.as(1, { action: 'play', k: 'stand' });
+      const g2 = (await t.room()).g;
+      check('블랙잭 정산: 블랙잭 1.5배 · 17 은 딜러 17 과 비김(돌려받음)', rr.status === 200 && g2.chips[0] === before[0] + 25 && g2.chips[1] === before[1] + 10 && g2.cur.result.outcome[0] === 'blackjack' && g2.cur.result.outcome[1] === 'push', JSON.stringify([before, g2.chips, g2.cur.result.outcome]));
     }
   } catch (e) { console.error(e); failures++; }
   console.log(failures ? `\n실패 ${failures}` : '\n전부 통과');

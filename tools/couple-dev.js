@@ -16,7 +16,7 @@ const GAMES = {
   wordbingo: 'wordbingo-core.mjs',
   'party-bingo': 'party-bingo-core.mjs', 'party-spice': 'party-spice-core.mjs', 'party-expedition': 'party-expedition-core.mjs', 'party-marble': 'party-marble-core.mjs',
   'party-gomoku': 'party-gomoku-core.mjs', 'party-balance': 'party-balance-core.mjs', 'party-wordbingo': 'party-wordbingo-core.mjs',
-  'party-gostop': 'party-gostop-core.mjs', 'party-seotda': 'party-seotda-core.mjs', 'party-holdem': 'party-holdem-core.mjs',
+  'party-gostop': 'party-gostop-core.mjs', 'party-seotda': 'party-seotda-core.mjs', 'party-holdem': 'party-holdem-core.mjs', 'party-blackjack': 'party-blackjack-core.mjs',
 };
 const TYPES = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
