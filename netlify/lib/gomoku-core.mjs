@@ -8,7 +8,7 @@
  *
  * 묶음(PRESETS)
  *   say   — 세이클럽 · 한게임 시절 '일반룰'. 흑백 모두 삼삼 금지, 장목은 안 쳐준다. 사사는 된다
- *   renju — 렌주룰. 흑만 삼삼 · 사사 · 장목 금지. 백은 제한 없고 장목도 이긴다
+ *   renju — 렌주룰 (기본). 흑만 삼삼 · 사사 · 장목 금지. 백은 제한 없고 장목도 이긴다
  *   free  — 금수 없음
  * 아무 규칙 없는 오목은 흑이 잘 두면 반드시 이기는 게임이다(증명돼 있다). 그래서 기본은 say.
  * 렌주의 '거짓 금수'(금수 자리로만 넷이 되는 삼은 삼이 아니다) 같은 재귀 판정은 하지 않는다.
@@ -38,7 +38,7 @@ const LEGACY = { black: R(true, false, false), white: R(false, false, false) };
 
 /* 받은 값을 믿지 않고 true/false 여섯 개로 다시 만든다 */
 export function normRules(x) {
-  if (!x || typeof x !== 'object') return normRules(PRESETS.say);
+  if (!x || typeof x !== 'object') return normRules(PRESETS.renju);   // 기본 렌주 (2026-10)
   const one = (o) => R(!!(o && o.three), !!(o && o.four), !!(o && o.long));
   return { black: one(x.black), white: one(x.white) };
 }

@@ -21,7 +21,7 @@ import { N, EMPTY, BLACK, WHITE, PRESETS, normRules, makeBoard, fiveAt, forbidde
 export { N, PRESETS, normRules };
 const DIRS = [[0, 1], [1, 0], [1, 1], [1, -1]];
 const WHY_MSG = { three: '삼삼이라 거기엔 둘 수 없어요', four: '사사라 거기엔 둘 수 없어요', long: '여섯 개 이상(장목)이 돼서 거기엔 둘 수 없어요' };
-const rulesOf = (room) => (room.opts && room.opts.rules) || normRules(PRESETS.say);
+const rulesOf = (room) => (room.opts && room.opts.rules) || normRules(PRESETS.renju);
 const colorKey = (color) => (color === BLACK ? 'black' : 'white');
 
 function setup(room) {

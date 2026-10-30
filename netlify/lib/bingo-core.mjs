@@ -9,7 +9,7 @@
  * · 누가 먼저인지는 선 정하기 기록에서 계산한다. 차례 = (선공 + 부른 개수) % 2.
  * · 상대 판은 응답에서 뺀다. 상대에 대해 알려주는 건 줄 수까지.
  *
- * 승패는 '누가 먼저 3줄이냐'. 둘이 같은 수에 3줄이면 무승부.
+ * 승패는 '누가 먼저 5줄이냐'(원래 3줄 — 2026-10 5줄로). 둘이 같은 수에 5줄이면 무승부.
  * 선공 이점은 시뮬레이션으로 쟀다 — 둘 다 욕심껏 부르면 47.6 : 42.8, 아무렇게나면 39 : 39.
  * '후공에게 마지막 한 번'(숫자야구식)을 넣으면 오히려 후공이 43 : 18 로 유리해진다.
  * 부른 숫자가 상대 판에도 체크되는 게임이라, 마지막에 부르는 쪽이 이득을 다 가져간다.
@@ -21,7 +21,7 @@ import { handleRoom, shuffle } from './room-kit.mjs';
 import { pickKind, firstOf, pickView, pickThrow, pickBot } from './first-pick.mjs';
 
 export const SIZE = 5;
-export const WIN_LINES = 3;          // 몇 줄이면 이기나
+export const WIN_LINES = 5;          // 몇 줄이면 이기나 (2026-10 탕비실 요청으로 3→5)
 export const CELLS = SIZE * SIZE;
 
 /* 5×5 의 12줄 (가로 5 + 세로 5 + 대각 2) 을 인덱스로 미리 적어둔다 */

@@ -68,7 +68,7 @@ const lib = (f) => import(path.join(__dirname, '..', 'netlify/lib', f));
       let r = await t.open();
       check('방: 개인전을 골라도 2팀 팀전', r.body.teams === 2 && JSON.stringify(r.body.teamOptions) === '[2]', String(r.body.teams));
       check('방: 개인전·3팀으로는 못 바꾼다', (await t.as(0, { action: 'teams', n: 0 })).status === 400 && (await t.as(0, { action: 'teams', n: 3 })).status === 400);
-      check('방: 금수를 안 보내면 세이클럽식', JSON.stringify((await t.room()).opts.rules) === JSON.stringify(SAY));
+      check('방: 금수를 안 보내면 렌주 (2026-10 기본)', JSON.stringify((await t.room()).opts.rules) === JSON.stringify(RENJU));
       const t2 = table(1, 0, 4, { rules: { black: { three: 1, four: 'x', long: 0 }, white: null } });
       await t2.open();
       check('방: 금수 값은 서버가 다시 거른다', JSON.stringify((await t2.room()).opts.rules) === JSON.stringify({ black: { three: true, four: true, long: false }, white: { three: false, four: false, long: false } }));
@@ -160,7 +160,7 @@ const lib = (f) => import(path.join(__dirname, '..', 'netlify/lib', f));
       r = await tr.as(Wf, { action: 'place', r: 3, c: 3 });
       check('렌주: 백 여섯(장목)도 이긴다', r.status === 200 && r.body.stage === 'done' && r.body.winTeam === r.body.players[Wf].team, JSON.stringify([r.status, r.body.error, r.body.stage]));
       // 세이클럽식: 흑 장목은 금수
-      const ts = table(2, 0, 2);
+      const ts = table(2, 0, 2, { rules: SAY });
       await ts.open(); r = await ts.start();
       const Bs = r.body.turn, Ws = 1 - Bs;
       await ts.setRoom((room) => { room.g.moves = [[3, 0, Bs], [0, 0, Ws], [3, 1, Bs], [0, 2, Ws], [3, 2, Bs], [0, 4, Ws], [3, 4, Bs], [0, 6, Ws], [3, 5, Bs], [0, 8, Ws]]; });
