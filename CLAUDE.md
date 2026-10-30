@@ -67,7 +67,7 @@
 
 ```
 /
-├─ index.html            허브(게임 목록)      → https://<사이트>.netlify.app/
+├─ index.html            허브(게임 목록) — 같은 게임은 타일 한 장에 [2명]·[2~8명] 링크 둘(2026-10, 탕비실 요청 "둘이서·여럿이 카드 합치기")  → https://<사이트>.netlify.app/
 ├─ netlify.toml          publish = "." / build 없음
 ├─ CLAUDE.md             이 문서
 ├─ README.md
