@@ -66,3 +66,15 @@
   for = "/*/art/*"
   [headers.values]
     Cache-Control = "public, max-age=604800"
+
+# 홈 화면 아이콘 — 매니페스트는 형식을 분명히, 아이콘은 오래 캐시
+[[headers]]
+  for = "/manifest.webmanifest"
+  [headers.values]
+    Content-Type = "application/manifest+json; charset=utf-8"
+    Cache-Control = "public, max-age=3600"
+
+[[headers]]
+  for = "/icons/*"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"
