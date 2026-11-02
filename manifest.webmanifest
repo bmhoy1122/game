@@ -4,7 +4,7 @@
   "description": "둘이서, 여럿이서 폰으로 같이 하는 게임 모음",
   "start_url": "/",
   "scope": "/",
-  "display": "standalone",
+  "display": "browser",
   "background_color": "#fbd3e0",
   "theme_color": "#f6a5c0",
   "lang": "ko",
