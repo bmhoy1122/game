@@ -15,7 +15,7 @@
  *
  * 홈(이름·인원·AI·만들기·들어가기) → 대기실(코드·사람들·AI 넣기·시작) → 게임(#game) → 끝(순위·다시 하기)
  * 폴링 1.4초(화면 숨기면 3.2초). 버튼 DOM 은 한 번만 만든다. ?name= ?code= 와 tellOpener 는 커플 게임과 같고,
- * ?bot=1&bots=N 은 AI N 명(기본 3)과 바로 시작한다. 홈의 혼자 하기도 'AI 상대' 셀렉트 수만큼(없음이면 3명).
+ * ?bot=1&bots=N 은 AI N 명(기본 3)과 바로 시작한다. ?max=N 은 홈의 최대 인원을 N 으로 미리 고른다(탕비실 토너먼트 2명 방). 홈의 혼자 하기도 'AI 상대' 셀렉트 수만큼(없음이면 3명).
  */
 (function () {
   const POLL_MS = 1400, POLL_SLOW_MS = 3200;
@@ -290,6 +290,8 @@
       const q = new URLSearchParams(location.search);
       const urlCode = q.get('code'), urlName = (q.get('name') || '').trim().slice(0, 8), urlBot = q.get('bot') === '1';
       const urlBots = Math.max(1, Math.min(CAP - 1, parseInt(q.get('bots'), 10) || 3));          // ?bot=1&bots=N — 탕비실에서 AI 수를 골라 옴 (기본 3)
+      const urlMax = parseInt(q.get('max'), 10);                                                  // ?max=N — 탕비실 토너먼트가 2명 방으로 열 때 (최대 인원 프리필)
+      if (urlMax >= 2 && urlMax <= CAP) $('pt-max').value = String(urlMax);
       let saved = null;
       try { saved = JSON.parse(localStorage.getItem(SAVE) || 'null'); } catch (e) {}
       if (saved && saved.name) { S.name = saved.name; $('pt-name').value = saved.name; }

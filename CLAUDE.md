@@ -474,7 +474,8 @@ GRAV = 0.6          GRAB_HOLD = 20     (Z 꾹 → 안기, 약 0.33초)
   더블이면 탈출). 통행료 = 가격 × [0.1, 0.3, 0.7, 1.5][건물], 같은 색 셋이면 2배, 항만·공항은 20/40. 못 내면 비싼 자산부터 반값 자동 매각,
   그래도 모자라면 파산(땅은 은행으로). 끝 = 한 명 남거나 차례 n×20 → 총자산(현금+땅값+건물값) 순. `state`: roll → (buy|build) → 다음.
   봇은 현금 여유(150/200)를 보고 사고 짓는다. 비밀 없음.
-- **화면**: `party-common/party.js` 하나가 홈·대기실·상단 칩·끝 화면·폴링·저장·`?name/?code/?bot=1`·`tellOpener` 를 다 한다.
+- **화면**: `party-common/party.js` 하나가 홈·대기실·상단 칩·끝 화면·폴링·저장·`?name/?code/?bot=1/?max=N`·`tellOpener` 를 다 한다.
+  `?max=N` 은 홈의 최대 인원을 미리 고른다(2026-11, 탕비실 토너먼트가 빙고를 2명 방으로 열 때).
   게임 페이지는 `Party.init({ game, title, rules, render(st, el, P), final })` 만 — `render` 는 play 단계 DOM 을 한 번 만들고 내용만 바꾼다.
   `P.act(action, body)`, `P.name(i)`, `P.color(i)`, `P.jo`, `P.toast`. `window.__party.st` 가 지금 상태(테스트용).
   ⚠️ `querySelector('#c+')` 같은 id 는 CSS 선택자로 못 쓴다 — 영문·숫자만. render 안 예외는 party.js 가 잡아 화면에 띄운다.
